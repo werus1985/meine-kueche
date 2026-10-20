@@ -39,6 +39,7 @@
 <div class="searchrow"><label for="stockSearch">Lebensmittel suchen</label><input id="stockSearch" type="search" placeholder="🔎 z. B. Milch, Reis, Tomaten" autocomplete="off"></div>
 <div class="filterrow"><label for="categoryFilter">Kategorie anzeigen</label><select id="categoryFilter"><option value="">Alle Kategorien</option></select></div><div class="filterrow"><label for="stockSort">Sortieren nach</label><select id="stockSort"><option value="default">Automatisch / Kategorie-Standard</option><option value="expiry">Haltbarkeit</option><option value="purchase">Kaufdatum – älteste zuerst</option><option value="name">Name – alphabetisch</option></select></div>
 <div id="stockList" class="card"></div>
+<div class="card" id="recipeCard"><h2>🍳 Was koche ich heute?</h2><p class="sub">Lass dir Rezeptideen aus den Lebensmitteln deines aktuellen Haushalts erstellen.</p><button type="button" class="primary" id="recipeButton">Rezeptideen aus meinem Vorrat</button><div id="recipeStatus" class="small" role="status" aria-live="polite" style="margin-top:10px"></div><div id="recipeResults"></div></div>
 </section>
 <section id="shopping" class="panel">
 <div class="card"><h2>Zur Einkaufsliste</h2><form id="shopForm"><div class="formgrid"><div class="field full"><label for="shopName">Produkt</label><input id="shopName" required maxlength="90" placeholder="Was fehlt dir?" aria-label="Produkt für Einkaufsliste"></div><div class="field"><label for="shopQty">Menge</label><input id="shopQty" value="1" maxlength="20"></div><div class="field"><label for="shopUnit">Einheit</label><select id="shopUnit"><option>Stück</option><option>Packung</option><option>g</option><option>kg</option><option>ml</option><option>Liter</option><option>Dose</option><option>Flasche</option></select></div><div class="field full"><label for="shopNotes">Notiz</label><input id="shopNotes" maxlength="240" placeholder="z. B. Marke, Angebot …"></div></div><button class="secondary" type="submit">Hinzufügen</button></form><p class="small">Tipp: Ein Produkt aus den Vorräten kannst du mit einem Klick auf die Einkaufsliste setzen.</p></div>
@@ -167,6 +168,37 @@ async function lookupBarcode(code){code=(code||$('barcodeCode').value).trim();if
 $('lookupBarcode').addEventListener('click',()=>lookupBarcode());
 $('scanBarcode').addEventListener('click',async()=>{if(!window.Html5Qrcode){$('barcodeStatus').textContent='Scanner-Bibliothek konnte nicht geladen werden. Gib den Barcode manuell ein.';return}try{$('scannerArea').classList.remove('hidden');barcodeScanner=new Html5Qrcode('barcodeReader');await barcodeScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:150}},async text=>{ $('barcodeCode').value=text;await barcodeScanner.stop();barcodeScanner.clear();barcodeScanner=null;$('scannerArea').classList.add('hidden');await lookupBarcode(text)},()=>{});$('barcodeStatus').textContent='Kamera auf den Barcode richten.'}catch(e){$('barcodeStatus').textContent='Kamera konnte nicht gestartet werden. Bitte Kamerazugriff erlauben oder Barcode manuell eingeben.';$('scannerArea').classList.add('hidden')}});
 $('stopScanner').addEventListener('click',async()=>{if(barcodeScanner){try{await barcodeScanner.stop();barcodeScanner.clear()}catch{}barcodeScanner=null}$('scannerArea').classList.add('hidden')});
+function recipeText(value){return Array.isArray(value)?value.map(v=>String(v)).join(' · '):String(value??'')}
+function renderRecipes(recipes){
+ const host=$('recipeResults');
+ if(!Array.isArray(recipes)||!recipes.length){host.innerHTML='<div class="notice">Es wurden keine Rezeptvorschläge zurückgegeben.</div>';return}
+ host.innerHTML=recipes.slice(0,5).map((r,i)=>`<article class="card" style="background:#f9faf5;margin:12px 0"><h2>${esc(r.name||`Rezept ${i+1}`)}</h2>${r.description?`<p>${esc(r.description)}</p>`:''}<div class="meta">⏱ ${esc(r.time_minutes??'?')} Minuten</div><h3 style="font-size:15px;margin:12px 0 5px">Zutaten</h3><ul>${(Array.isArray(r.ingredients)?r.ingredients:[]).map(v=>`<li>${esc(v)}</li>`).join('')}</ul>${Array.isArray(r.missing)&&r.missing.length?`<h3 style="font-size:15px;margin:12px 0 5px">Fehlt noch</h3><ul>${r.missing.map(v=>`<li>${esc(v)}</li>`).join('')}</ul><button type="button" class="secondary" data-recipe-missing="${i}">Fehlende Zutaten auf Einkaufsliste</button>`:''}<h3 style="font-size:15px;margin:12px 0 5px">Zubereitung</h3><ol>${(Array.isArray(r.steps)?r.steps:[]).map(v=>`<li style="margin:5px 0">${esc(v)}</li>`).join('')}</ol></article>`).join('');
+ host.dataset.recipes=JSON.stringify(recipes.slice(0,5));
+}
+$('recipeButton').addEventListener('click',async()=>{
+ const status=$('recipeStatus'),button=$('recipeButton'),host=$('recipeResults');
+ if(!client){status.textContent='Bitte zuerst unter „Cloud-Sync konfigurieren“ deine Supabase-Verbindung einrichten.';return}
+ if(!currentUser){status.textContent='Bitte zuerst anmelden, damit die Rezeptfunktion aufgerufen werden kann.';return}
+ const stock=items.filter(x=>(x.household_id||'haushalt-1')===activeHousehold&&x.kind==='stock');
+ if(!stock.length){status.textContent='In diesem Haushalt sind noch keine Vorräte gespeichert. Füge zuerst Lebensmittel hinzu.';return}
+ button.disabled=true;status.textContent='Die KI sucht passende Rezeptideen …';host.innerHTML='';
+ try{
+  const {data,error}=await client.functions.invoke('recipe-suggestions',{body:{items:stock.map(x=>({kind:x.kind,name:x.name,qty:x.qty||'1',unit:x.unit||'Stück',expiry:x.expiry||null,category:x.category||'Allgemein'}))}});
+  if(error)throw error;
+  if(data?.error)throw new Error(data.error);
+  if(data?.message)status.textContent=data.message;else status.textContent='Hier sind deine Rezeptideen:';
+  renderRecipes(data?.recipes||[]);
+ }catch(err){console.error('Rezeptvorschläge fehlgeschlagen:',err);status.textContent='Rezeptvorschläge konnten nicht geladen werden. Prüfe, ob die Edge Function deployed ist und die Anmeldung funktioniert.'+(err?.message?' Details: '+err.message:'');}
+ finally{button.disabled=false}
+});
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-recipe-missing]');if(!b)return;
+ let recipes=[];try{recipes=JSON.parse($('recipeResults').dataset.recipes||'[]')}catch{}
+ const recipe=recipes[Number(b.dataset.recipeMissing)];if(!recipe||!Array.isArray(recipe.missing))return;
+ let added=0;
+ recipe.missing.forEach(raw=>{const name=String(raw||'').trim();if(!name)return;const duplicate=items.some(x=>x.kind==='shop'&&(x.household_id||'haushalt-1')===activeHousehold&&!x.checked&&(x.name||'').trim().toLocaleLowerCase('de')===name.toLocaleLowerCase('de'));if(!duplicate){items.push({id:uid(),household_id:activeHousehold,kind:'shop',name,qty:'1',unit:'Stück',notes:'Für Rezept: '+String(recipe.name||'Rezept'),category:'Allgemein',checked:false,updated_at:new Date().toISOString()});added++}});
+ saveLocal();render();queueSync();$('recipeStatus').textContent=added?`${added} fehlende Zutat${added===1?' wurde':'en wurden'} zur Einkaufsliste hinzugefügt.`:'Diese Zutaten stehen bereits auf deiner Einkaufsliste.';
+});
 function cfg(){try{return JSON.parse(localStorage.getItem(CFG)||'{}')}catch{return {}}}
 function setBadge(t){$('syncBadge').textContent=t}
 function authUi(){ $('authForm').classList.toggle('hidden',!client||!!currentUser);$('authStatus').textContent=!client?'Cloud-Sync noch nicht eingerichtet.':currentUser?`Angemeldet: ${currentUser.email}. Synchronisierung aktiv.`:'Verbunden. Melde dich an oder erstelle ein Konto.';setBadge(currentUser?'Cloud-Sync aktiv':client?'Cloud bereit':'Nur auf diesem Gerät')}
