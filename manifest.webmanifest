@@ -1,0 +1,17 @@
+{
+  "name": "Meine Küche – Kücheninventar",
+  "short_name": "Meine Küche",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f6f5ef",
+  "theme_color": "#f6f5ef",
+  "description": "Kücheninventar mit Mindesthaltbarkeit und Einkaufsliste.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
