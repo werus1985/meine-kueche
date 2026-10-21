@@ -290,6 +290,7 @@
 </section>
 <div class="footer">Deine Küche · einfacher Prototyp · Daten lokal gespeichert, solange Cloud-Sync nicht eingerichtet ist</div>
 </main>
+<input id="quickPhotoInput" type="file" accept="image/*" capture="environment" hidden>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 const $=id=>document.getElementById(id), KEY='kueche-v1-items', CFG='kueche-v1-supabase';
@@ -697,7 +698,7 @@ document.addEventListener('input', function(event) {
   queueSync();
 });
 
-</script><input id="quickPhotoInput" type="file" accept="image/*" capture="environment" hidden>
+</script>
 </body></html>
 
 <style>
