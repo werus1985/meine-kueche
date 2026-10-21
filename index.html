@@ -593,11 +593,12 @@ function openQuickDatePicker(itemId,field){
  const hint=document.createElement('div');hint.textContent='Das Datum wird nach der Auswahl automatisch gespeichert.';hint.style.cssText='font-size:13px;opacity:.75;margin-bottom:14px;';
  const actions=document.createElement('div');actions.style.cssText='display:flex;justify-content:flex-end;gap:10px;';
  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Abbrechen';cancel.style.cssText='min-height:42px;padding:8px 14px;border-radius:10px;border:1px solid var(--border,#ccc);background:var(--surface,#f5f5f5);color:inherit;font:inherit;';
- let finished=false;const close=()=>{if(finished)return;finished=true;overlay.remove()};
- const saveSelectedDate=()=>{if(finished||!input.value)return;item[field]=input.value;item.updated_at=new Date().toISOString();saveLocal();close();render();queueSync()};
+ let finished=false;let userChangedDate=false;const originalValue=input.value;const close=()=>{if(finished)return;finished=true;overlay.remove()};
+ const saveSelectedDate=()=>{if(finished||!userChangedDate||!input.value||input.value===originalValue)return;item[field]=input.value;item.updated_at=new Date().toISOString();saveLocal();close();render();queueSync()};
  cancel.addEventListener('click',close);overlay.addEventListener('click',e=>{if(e.target===overlay)close()});
- // On iPhone, tapping the date field opens the native picker. Its checkmark
- // commits the value and fires change; save immediately without a second dialog.
+ // iOS Safari can initialise an empty date input to today when its picker opens.
+ // Only save after an actual input event from a date selection, never on change alone.
+ input.addEventListener('input',()=>{userChangedDate=true});
  input.addEventListener('change',saveSelectedDate);
  input.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
  actions.append(cancel);panel.append(title,input,hint,actions);overlay.append(panel);document.body.append(overlay);
@@ -605,14 +606,6 @@ function openQuickDatePicker(itemId,field){
  // on some iOS versions that immediately commits today's date. Let the user
  // tap the visible date field, then save only after an actual date selection.
 }
-// Date buttons: delegate at capture phase so the click is handled before other UI listeners.
-document.addEventListener('click',e=>{
- const expiryButton=e.target.closest('[data-expiry-edit]');
- if(expiryButton){e.preventDefault();e.stopImmediatePropagation();openQuickDatePicker(expiryButton.getAttribute('data-expiry-edit'),'expiry');return;}
- const purchaseButton=e.target.closest('[data-purchase-edit]');
- if(purchaseButton){e.preventDefault();e.stopImmediatePropagation();openQuickDatePicker(purchaseButton.getAttribute('data-purchase-edit'),'purchased_at');return;}
-},true);
-
 document.addEventListener('click',e=>{const addPhoto=e.target.closest('[data-photo-add]');if(addPhoto){const input=document.getElementById('quickPhotoInput');if(input){input.dataset.itemId=addPhoto.dataset.photoAdd;input.value='';input.click()}return}const edit=e.target.closest('[data-edit]');if(edit){editItem(edit.dataset.edit);return}const buy=e.target.closest('[data-buy]');if(buy)buyItem(buy.dataset.buy)},true);
 document.addEventListener('click',e=>{const step=e.target.closest('[data-qty-step]');if(step){const x=items.find(y=>y.id===step.dataset.qtyId);if(!x)return;const next=Math.max(0,qtyNumber(x.qty??'1')+Number(step.dataset.qtyStep)*stepFor(x.unit||'Stück'));setItemQuantity(x.id,fmtQty(next));return}const buy=e.target.closest('[data-buy-needed]');if(buy){const id=buy.dataset.buyNeeded;const x=items.find(y=>y.id===id);if(!x)return;const duplicate=items.some(y=>y.kind==='shop'&&(y.household_id||'haushalt-1')===(x.household_id||activeHousehold)&&(y.name||'').trim().toLocaleLowerCase('de')===(x.name||'').trim().toLocaleLowerCase('de')&&(y.unit||'Stück')===(x.unit||'Stück'));if(duplicate){alert('Dieser Artikel steht bereits auf der Einkaufsliste. Es wurde kein doppelter Eintrag angelegt.');return}const newId=uid();upsertLocal({id:newId,household_id:x.household_id||activeHousehold,kind:'shop',name:x.name,qty:'1',unit:x.unit||'Stück',notes:x.notes||'',category:x.category||'Allgemein',photoPath:null,photoUrl:null,productImage:x.productImage||null,checked:false,updated_at:new Date().toISOString()});return}});
 document.addEventListener('change',e=>{const inp=e.target.closest('[data-qty-input]');if(inp)setItemQuantity(inp.dataset.qtyInput,inp.value);const step=e.target.closest('[data-unit-step]');if(step){const raw=step.value.trim().replace(',','.');if(!raw||!Number.isFinite(Number(raw))||Number(raw)<=0){alert('Die Schrittgröße muss größer als 0 sein.');renderSettings();return}unitSteps[step.dataset.unitStep]=Number(raw);saveSettings();queueSync();renderSettings()}});
