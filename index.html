@@ -114,73 +114,9 @@
 }
 
 
-/* Korrektur: X bei Datumsfeldern behalten; Notiz-Aktion links unten */
-.note-expand{display:block!important;width:100%!important;clear:both!important;margin:3px 0 0!important;text-align:left!important}
-.note-expand summary{display:inline-flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;list-style:none!important;padding:2px 0!important}
-.note-expand summary::-webkit-details-marker{display:none}
 
-
-/* Notiz-Aktion auf gleicher Höhe wie Produktaktionen; Notizinhalt klappt darunter auf */
-.stock-actions-row{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) auto auto auto!important;
-  align-items:center!important;
-  gap:5px!important;
-  width:100%!important;
-  position:relative!important;
-  overflow:visible!important;
-}
-.stock-actions-row .note-expand{
-  display:contents!important;
-  margin:0!important;
-  width:auto!important;
-  min-width:0!important;
-}
-.stock-actions-row .note-expand summary{
-  grid-column:1!important;
-  grid-row:1!important;
-  justify-self:start!important;
-  align-self:center!important;
-  display:inline-flex!important;
-  align-items:center!important;
-  gap:5px!important;
-  white-space:nowrap!important;
-  padding:5px 0!important;
-  margin:0!important;
-  font-size:11px!important;
-  line-height:1.2!important;
-}
-.stock-actions-row .note-expand summary:after{
-  content:"＋"!important;
-  margin:0!important;
-  font-size:13px!important;
-}
-.stock-actions-row .note-expand[open] summary:after{content:"−"!important}
-.stock-actions-row .note-content{
-  grid-column:1/-1!important;
-  grid-row:2!important;
-  width:100%!important;
-  box-sizing:border-box!important;
-  margin:2px 0 0!important;
-  position:relative!important;
-  z-index:1!important;
-  padding:8px 10px!important;
-  font-size:11px!important;
-  white-space:pre-wrap!important;
-  overflow-wrap:anywhere!important;
-}
-.stock-actions-row .iconbtn{grid-row:1!important;align-self:center!important}
-.stock-actions-row .iconbtn[data-edit]{grid-column:2!important}
-.stock-actions-row .iconbtn[data-addshop]{grid-column:3!important}
-.stock-actions-row .iconbtn[data-delete]{grid-column:4!important}
-@media(max-width:599px){
- .stock-actions-row{grid-template-columns:minmax(0,1fr) auto auto auto!important;gap:4px!important}
- .stock-actions-row .note-expand summary{font-size:10px!important}
- .stock-actions-row .iconbtn{padding:5px 7px!important;min-height:32px!important;font-size:10px!important}
-}
-
-
-/* Final fix: keep the note toggle and actions on one line; expanded note spans below it. */
+/* Notiz: separater Schalter in Aktionszeile, Inhalt als echtes Element darunter.
+   Keine display:contents/details-Verschachtelung, damit iOS Safari es korrekt anordnet. */
 .stock-actions-row{
   display:flex!important;
   flex-direction:row!important;
@@ -188,112 +124,45 @@
   align-items:center!important;
   justify-content:flex-end!important;
   gap:5px!important;
+  width:100%!important;
   position:relative!important;
   overflow:visible!important;
 }
-.stock-actions-row .note-expand{display:contents!important;margin:0!important;padding:0!important}
-.stock-actions-row .note-expand summary{
+.stock-actions-row .note-toggle{
   order:0!important;
   margin-right:auto!important;
   flex:0 0 auto!important;
-  width:auto!important;
-  max-width:none!important;
-  white-space:nowrap!important;
   align-self:center!important;
-  padding:5px 0!important;
-  font-size:11px!important;
-  line-height:1.2!important;
-}
-.stock-actions-row .note-expand summary:after{content:"＋"!important;margin-left:5px!important}
-.stock-actions-row .note-expand[open] summary:after{content:"−"!important}
-.stock-actions-row .note-content{
-  order:5!important;
-  display:block!important;
-  flex:0 0 100%!important;
-  width:100%!important;
-  max-width:100%!important;
-  min-width:0!important;
-  box-sizing:border-box!important;
-  margin:3px 0 0!important;
-  position:static!important;
-  padding:9px 11px!important;
-  border-radius:10px!important;
-  overflow-wrap:anywhere!important;
-  white-space:pre-wrap!important;
-  font-size:12px!important;
-  line-height:1.4!important;
-}
-.stock-actions-row .iconbtn{order:1!important;position:relative!important;z-index:2!important}
-.stock-actions-row .note-expand[open] .note-content{clear:both!important}
-
-
-/* Definitive layout: actions are row 1; expanded note is a full-width row 2 */
-.stock-actions-row{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) auto auto auto!important;
-  grid-template-rows:auto auto!important;
-  align-items:center!important;
-  justify-content:initial!important;
-  gap:5px!important;
-  width:100%!important;
-  min-width:0!important;
-  overflow:visible!important;
-}
-.stock-actions-row .note-expand{
-  display:contents!important;
-  margin:0!important;
-  padding:0!important;
-  min-width:0!important;
-}
-.stock-actions-row .note-expand summary{
-  grid-column:1!important;
-  grid-row:1!important;
-  justify-self:start!important;
-  align-self:center!important;
-  width:auto!important;
-  max-width:none!important;
-  margin:0!important;
+  border:0!important;
+  background:transparent!important;
+  color:var(--green)!important;
+  font:600 11px/1.2 inherit!important;
   padding:5px 0!important;
   white-space:nowrap!important;
+  cursor:pointer!important;
 }
-.stock-actions-row .note-expand summary:after{
-  content:"＋"!important;
-  margin-left:5px!important;
-}
-.stock-actions-row .note-expand[open] summary:after{content:"−"!important}
-.stock-actions-row .note-content{
-  grid-column:1 / -1!important;
-  grid-row:2!important;
-  justify-self:stretch!important;
-  align-self:start!important;
+.stock-actions-row .note-toggle:after{content:"＋";margin-left:5px;font-size:13px}
+.stock-actions-row .note-toggle[aria-expanded="true"]:after{content:"−"}
+.stock-actions-row .iconbtn{order:1!important;align-self:center!important}
+.note-content-below{
   display:block!important;
+  clear:both!important;
   width:100%!important;
-  min-width:0!important;
-  max-width:100%!important;
   box-sizing:border-box!important;
-  margin:3px 0 0!important;
-  padding:9px 11px!important;
-  position:static!important;
+  margin:7px 0 0!important;
+  padding:10px 12px!important;
   border-radius:10px!important;
-  overflow-wrap:anywhere!important;
-  white-space:pre-wrap!important;
+  background:#f5f6ef!important;
+  color:var(--ink)!important;
   font-size:12px!important;
   line-height:1.4!important;
+  white-space:pre-wrap!important;
+  overflow-wrap:anywhere!important;
 }
-.stock-actions-row .iconbtn{
-  grid-row:1!important;
-  align-self:center!important;
-  justify-self:stretch!important;
-  position:relative!important;
-  z-index:2!important;
-}
-.stock-actions-row .iconbtn[data-edit]{grid-column:2!important}
-.stock-actions-row .iconbtn[data-addshop]{grid-column:3!important}
-.stock-actions-row .iconbtn[data-delete]{grid-column:4!important}
+.note-content-below[hidden]{display:none!important}
 @media(max-width:599px){
- .stock-actions-row{grid-template-columns:minmax(0,1fr) auto auto auto!important;gap:4px!important}
- .stock-actions-row .iconbtn{padding:5px 7px!important;min-height:32px!important;font-size:10px!important}
- .stock-actions-row .note-content{font-size:12px!important}
+  .stock-actions-row{gap:4px!important}
+  .stock-actions-row .note-toggle{font-size:11px!important}
 }
 
 </style>
@@ -458,7 +327,7 @@ function render(){
  $('stockCount').textContent=`${stock.length} Produkt${stock.length===1?'':'e'}`;$('shoppingCount').textContent=shop.filter(x=>!x.checked).length?`(${shop.filter(x=>!x.checked).length})`:'';
  const urgent=stock.filter(x=>x.expiry&&daysUntil(x.expiry)<=ruleFor(x.category||'Allgemein').yellowDays).sort((a,b)=>a.expiry.localeCompare(b.expiry));
  $('alertArea').innerHTML=urgent.length?`<div class="notice">${urgent.some(x=>daysUntil(x.expiry)<0)?'⚠️ Abgelaufene Produkte: ':'⏰ Bald aufbrauchen: '}${urgent.slice(0,3).map(x=>esc(x.name)).join(', ')}${urgent.length>3?' …':''}</div>`:'';
- $('stockList').innerHTML=stock.length?stock.slice().sort((a,b)=>compareStock(a,b,activeSort())).map(x=>`<div class="item"><div class="itemmain">${(x.photoPath||x.photoData||x.productImage)?`<img class="product-photo" data-photo-id="${esc(x.id)}" src="${esc(x.photoUrl||x.photoData||x.productImage||'')}" alt="Foto ${esc(x.name)}">`:``}<div class="itemname">${esc(x.name)}</div><div class="meta">${esc(x.location||'Vorratsschrank')}</div>${quantityControl(x)}${qtyNumber(x.qty??'1')===0?`<button type="button" class="secondary" data-buy-needed="${esc(x.id)}">🛒 Nachkaufen</button>`:''}<span class="pill">${esc(x.category||'Allgemein')}</span> ${x.expiry?`<span class="pill ${expiryClass(x.expiry,x.category||'Allgemein')}">${esc(expiryLabel(x.expiry))}</span>`:'<button type="button" class="pill missing-expiry" data-expiry-edit="${x.id}">⚠ Haltbarkeit fehlt</button>'} <span class="pill ${ageClass(x.purchased_at,x.category||'Allgemein')}">${esc(ageLabel(x.purchased_at))}</span></div><div class="row stock-actions-row" style="align-items:center;flex-wrap:wrap"><details class="note-expand"><summary>${x.notes?'Notiz anzeigen':'Notiz'}</summary><div class="note-content">${x.notes?esc(x.notes):'<span class="small">Noch keine Notiz vorhanden. Über „Bearbeiten“ kannst du eine hinzufügen.</span>'}</div></details><button class="iconbtn edit-subtle" data-edit="${x.id}"><svg class="action-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5Z"/><path d="m13.8 6.7 3.5 3.5"/></svg>Bearbeiten</button><button class="iconbtn" data-addshop="${x.id}" aria-label="Auf Einkaufsliste"><svg class="action-line-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.2l2.4 11.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 1.9-1.4l2-7.4H6"/></svg>Einkauf</button><button class="iconbtn" data-delete="${x.id}" aria-label="Löschen" title="Löschen"><svg class="action-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13M10 10v7m4-7v7"/></svg></button></div></div>`).join(''):`<div class="empty"><strong>Noch ist der Vorrat leer</strong>Füge oben dein erstes Lebensmittel hinzu.</div>`;
+ $('stockList').innerHTML=stock.length?stock.slice().sort((a,b)=>compareStock(a,b,activeSort())).map(x=>`<div class="item"><div class="itemmain">${(x.photoPath||x.photoData||x.productImage)?`<img class="product-photo" data-photo-id="${esc(x.id)}" src="${esc(x.photoUrl||x.photoData||x.productImage||'')}" alt="Foto ${esc(x.name)}">`:``}<div class="itemname">${esc(x.name)}</div><div class="meta">${esc(x.location||'Vorratsschrank')}</div>${quantityControl(x)}${qtyNumber(x.qty??'1')===0?`<button type="button" class="secondary" data-buy-needed="${esc(x.id)}">🛒 Nachkaufen</button>`:''}<span class="pill">${esc(x.category||'Allgemein')}</span> ${x.expiry?`<span class="pill ${expiryClass(x.expiry,x.category||'Allgemein')}">${esc(expiryLabel(x.expiry))}</span>`:'<button type="button" class="pill missing-expiry" data-expiry-edit="${x.id}">⚠ Haltbarkeit fehlt</button>'} <span class="pill ${ageClass(x.purchased_at,x.category||'Allgemein')}">${esc(ageLabel(x.purchased_at))}</span></div><div class="row stock-actions-row" style="align-items:center;flex-wrap:wrap"><button type="button" class="note-toggle" data-note-toggle="${esc(x.id)}" aria-expanded="false">Notiz</button><button class="iconbtn edit-subtle" data-edit="${x.id}"><svg class="action-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5Z"/><path d="m13.8 6.7 3.5 3.5"/></svg>Bearbeiten</button><button class="iconbtn" data-addshop="${x.id}" aria-label="Auf Einkaufsliste"><svg class="action-line-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.2l2.4 11.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 1.9-1.4l2-7.4H6"/></svg>Einkauf</button><button class="iconbtn" data-delete="${x.id}" aria-label="Löschen" title="Löschen"><svg class="action-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13M10 10v7m4-7v7"/></svg></button></div><div class="note-content note-content-below" data-note-content="${esc(x.id)}" hidden>${x.notes?esc(x.notes):'<span class="small">Noch keine Notiz vorhanden. Über „Bearbeiten“ kannst du eine hinzufügen.</span>'}</div></div>`).join(''):`<div class="empty"><strong>Noch ist der Vorrat leer</strong>Füge oben dein erstes Lebensmittel hinzu.</div>`;
  $('shopList').innerHTML=shop.length?shop.sort((a,b)=>Number(a.checked)-Number(b.checked)).map(x=>`<div class="item"><input class="check" type="checkbox" data-check="${x.id}" ${x.checked?'checked':''} aria-label="${esc(x.name)} erledigt"><div class="itemmain">${(x.photoPath||x.photoData||x.productImage)?`<img class="product-photo" data-photo-id="${esc(x.id)}" src="${esc(x.photoUrl||x.photoData||x.productImage||'')}" alt="Foto ${esc(x.name)}">`:``}<div class="itemname" style="${x.checked?'text-decoration:line-through;color:var(--muted)':''}">${esc(x.name)}</div><div class="meta">${x.checked?'Erledigt':'Noch einkaufen'}</div>${quantityControl(x)}<span class="pill">${esc(x.category||'Allgemein')}</span>${x.expiry?` <span class="pill ${expiryClass(x.expiry,x.category||'Allgemein')}">MHD: ${esc(x.expiry)}</span>`:''}${x.notes?`<div class="meta">📝 ${esc(x.notes)}</div>`:''}</div><div class="row" style="flex-wrap:wrap"><button class="iconbtn" data-edit="${x.id}">✏️ Bearbeiten</button><button class="iconbtn" data-buy="${x.id}">In Vorrat</button><button class="iconbtn" data-delete="${x.id}">🗑️</button></div></div>`).join(''):`<div class="empty"><strong>Alles im Haus?</strong>Füge oben hinzu, was du einkaufen möchtest.</div>`;
  $('clearChecked').classList.toggle('hidden',!shop.some(x=>x.checked));
  refreshPrivatePhotoUrls();
@@ -704,4 +573,19 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     }
   });
 }
+
+
+document.addEventListener('click', function(event) {
+  const toggle = event.target.closest('[data-note-toggle]');
+  if (!toggle) return;
+  const id = toggle.getAttribute('data-note-toggle');
+  const item = toggle.closest('.item');
+  if (!item) return;
+  const panel = item.querySelector('[data-note-content="' + CSS.escape(id) + '"]');
+  if (!panel) return;
+  const opening = panel.hidden;
+  panel.hidden = !opening;
+  toggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
+});
+
 </script></body></html>
