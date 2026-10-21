@@ -585,32 +585,37 @@ async function buyItem(id){const x=items.find(y=>y.id===id);if(!x)return;const e
 function openQuickDatePicker(itemId,field){
  const item=items.find(x=>String(x.id)===String(itemId));
  if(!item)return;
- // Prevent duplicate dialogs if a tap is delivered more than once.
- if(document.querySelector('[data-quick-date-dialog]'))return;
- const label=field==='expiry'?'Mindesthaltbarkeitsdatum':'Kaufdatum';
- const overlay=document.createElement('div');
- overlay.dataset.quickDateDialog='true';
- overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label',label);
- overlay.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;padding:20px;';
- const panel=document.createElement('div');panel.style.cssText='width:min(100%,360px);background:var(--card,#fff);color:var(--text,#222);border-radius:16px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.24);';
- const title=document.createElement('div');title.textContent=label;title.style.cssText='font-size:18px;font-weight:600;margin-bottom:14px;';
- const input=document.createElement('input');input.type='date';input.value=item[field]||'';input.setAttribute('aria-label',label);input.style.cssText='display:block;width:100%;box-sizing:border-box;min-height:48px;font:inherit;padding:10px;border:1px solid var(--border,#ccc);border-radius:10px;margin-bottom:12px;background:var(--bg,#fff);color:inherit;';
- const hint=document.createElement('div');hint.textContent='Bitte Datum auswählen und anschließend speichern.';hint.style.cssText='font-size:13px;opacity:.75;margin-bottom:16px;';
- const actions=document.createElement('div');actions.style.cssText='display:flex;justify-content:flex-end;gap:10px;';
- const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Abbrechen';cancel.style.cssText='min-height:42px;padding:8px 14px;border-radius:10px;border:1px solid var(--border,#ccc);background:var(--surface,#f5f5f5);color:inherit;font:inherit;';
- const save=document.createElement('button');save.type='button';save.textContent='Datum speichern';save.style.cssText='min-height:42px;padding:8px 14px;border-radius:10px;border:1px solid var(--accent,#26734d);background:var(--accent,#26734d);color:white;font:inherit;';
- const close=()=>overlay.remove();
- cancel.addEventListener('click',close);
- save.addEventListener('click',()=>{
-   if(!input.value){input.focus();return;}
-   item[field]=input.value;item.updated_at=new Date().toISOString();saveLocal();close();render();queueSync();
- });
- overlay.addEventListener('click',e=>{if(e.target===overlay)close()});
- input.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
- actions.append(cancel,save);panel.append(title,input,hint,actions);overlay.append(panel);document.body.append(overlay);
- // Do not open the native picker programmatically: on iOS this can commit today's date.
+ // Create the native date input inside the same user gesture. No intermediate dialog.
+ const input=document.createElement('input');
+ input.type='date';
+ input.value=item[field]||'';
+ input.setAttribute('aria-label',field==='expiry'?'Mindesthaltbarkeitsdatum':'Kaufdatum');
+ input.setAttribute('autocomplete','off');
+ input.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:0.01;border:0;padding:0;margin:0;z-index:99999;';
+ let handled=false;
+ const cleanup=()=>{if(input.isConnected)input.remove()};
+ const saveDate=()=>{
+   if(handled)return;
+   handled=true;
+   if(input.value){
+     item[field]=input.value;
+     item.updated_at=new Date().toISOString();
+     saveLocal();
+     render();
+     queueSync();
+   }
+   cleanup();
+ };
+ input.addEventListener('change',saveDate,{once:true});
+ input.addEventListener('blur',()=>{setTimeout(()=>{if(!handled)cleanup()},700)},{once:true});
+ document.body.appendChild(input);
+ // Must be synchronous in the button's click handler for iOS Safari to treat it as a user action.
+ try{
+   if(typeof input.showPicker==='function')input.showPicker();
+   else input.click();
+ }catch(err){input.click();}
 }
-// One delegated handler for both date buttons; avoids depending on inline onclick behavior.
+// Handle both missing-date buttons through one delegated handler.
 document.addEventListener('click',e=>{
  const expiry=e.target.closest('[data-expiry-edit]');
  const purchase=e.target.closest('[data-purchase-edit]');
