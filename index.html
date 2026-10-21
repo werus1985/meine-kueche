@@ -1820,12 +1820,26 @@
 
     <section id="recipes" class="panel">
       <div class="card" id="recipeCard">
-        <h2>✨ KI-Rezeptideen</h2>
-        <p class="sub">Lass dir Rezepte passend zu den Vorräten deines ausgewählten Haushalts vorschlagen. Später kannst
-          du hier auch beschreiben, worauf du Lust hast und welche Kategorien berücksichtigt werden sollen.</p><button
-          type="button" class="primary" id="recipeButton">Rezeptideen aus meinem Vorrat finden</button>
+        <h2>✨ Dein KI-Küchenhelfer</h2>
+        <p class="sub">Stelle Fragen zu deinem Vorrat, lass dir Rezepte oder Einkaufstipps geben. Die ausgewählten Kategorien bestimmen, welche Vorräte die KI berücksichtigen darf.</p>
+        <details class="filterrow" id="aiCategoryFilter" open>
+          <summary style="cursor:pointer;font-weight:750">Vorratsfilter für die KI <span class="small" id="aiCategorySummary">Alle Kategorien</span></summary>
+          <p class="small" style="margin:6px 0">Wähle dieselben Kategorien wie im Vorrat. Ohne Auswahl werden alle Kategorien berücksichtigt.</p>
+          <div id="aiCategoryChoices" class="category-list"></div>
+          <button type="button" class="secondary" id="aiClearCategories" style="margin-top:8px">Alle Kategorien anzeigen</button>
+        </details>
+        <button type="button" class="primary" id="recipeButton">Rezeptideen aus meinem Vorrat finden</button>
         <div id="recipeStatus" class="small" role="status" aria-live="polite" style="margin-top:10px"></div>
         <div id="recipeResults"></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+        <h2>Mit der KI chatten</h2>
+        <div id="aiChatMessages" aria-live="polite" style="display:grid;gap:10px;margin:10px 0"></div>
+        <form id="aiChatForm">
+          <label for="aiChatInput">Deine Frage</label>
+          <textarea id="aiChatInput" maxlength="1500" rows="3" placeholder="z. B. Was kann ich mit Milch und Äpfeln kochen? Oder: Was sollte ich bald aufbrauchen?" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;resize:vertical" required></textarea>
+          <button type="submit" class="primary" id="aiChatSend">Nachricht senden</button>
+        </form>
+        <p class="small">Die KI erhält nur Vorräte aus den ausgewählten Kategorien. Fehlende Rezeptzutaten kannst du weiterhin direkt auf die Einkaufsliste setzen.</p>
       </div>
     </section>
     <section id="household" class="panel">
@@ -2201,15 +2215,30 @@
       host.innerHTML = recipes.slice(0, 5).map((r, i) => `<article class="card" style="background:#f9faf5;margin:12px 0"><h2>${esc(r.name || `Rezept ${i + 1}`)}</h2>${r.description ? `<p>${esc(r.description)}</p>` : ''}<div class="meta">⏱ ${esc(r.time_minutes ?? '?')} Minuten</div><h3 style="font-size:15px;margin:12px 0 5px">Zutaten</h3><ul>${(Array.isArray(r.ingredients) ? r.ingredients : []).map(v => `<li>${esc(v)}</li>`).join('')}</ul>${Array.isArray(r.missing) && r.missing.length ? `<h3 style="font-size:15px;margin:12px 0 5px">Fehlt noch</h3><ul>${r.missing.map(v => `<li>${esc(v)}</li>`).join('')}</ul><button type="button" class="secondary" data-recipe-missing="${i}">Fehlende Zutaten auf Einkaufsliste</button>` : ''}<h3 style="font-size:15px;margin:12px 0 5px">Zubereitung</h3><ol>${(Array.isArray(r.steps) ? r.steps : []).map(v => `<li style="margin:5px 0">${esc(v)}</li>`).join('')}</ol></article>`).join('');
       host.dataset.recipes = JSON.stringify(recipes.slice(0, 5));
     }
+    function aiFilteredStock() {
+      return items.filter(x => (x.household_id || 'haushalt-1') === activeHousehold && x.kind === 'stock' && (!selectedStockCategories.length || selectedStockCategories.includes(x.category || 'Allgemein')));
+    }
+    function renderAiCategoryFilter() {
+      const host = $('aiCategoryChoices'); if (!host) return;
+      host.innerHTML = categories.map(c => `<label class="category-chip" style="cursor:pointer"><input type="checkbox" data-ai-category="${esc(c)}" ${selectedStockCategories.includes(c) ? 'checked' : ''} style="width:16px;height:16px;margin:0;accent-color:var(--green)"> ${esc(c)}</label>`).join('');
+      $('aiCategorySummary').textContent = selectedStockCategories.length ? `${selectedStockCategories.length} ausgewählt` : 'Alle Kategorien';
+    }
+    $('aiCategoryChoices').addEventListener('change', e => {
+      const cb = e.target.closest('[data-ai-category]'); if (!cb) return;
+      const c = cb.dataset.aiCategory;
+      selectedStockCategories = cb.checked ? [...new Set([...selectedStockCategories, c])] : selectedStockCategories.filter(x => x !== c);
+      saveStockFilters(); renderAiCategoryFilter(); render();
+    });
+    $('aiClearCategories').addEventListener('click', () => { selectedStockCategories = []; saveStockFilters(); renderAiCategoryFilter(); render(); });
     $('recipeButton').addEventListener('click', async () => {
       const status = $('recipeStatus'), button = $('recipeButton'), host = $('recipeResults');
       if (!client) { status.textContent = 'Bitte zuerst unter „Cloud-Sync konfigurieren“ deine Supabase-Verbindung einrichten.'; return }
       if (!currentUser) { status.textContent = 'Bitte zuerst anmelden, damit die Rezeptfunktion aufgerufen werden kann.'; return }
-      const stock = items.filter(x => (x.household_id || 'haushalt-1') === activeHousehold && x.kind === 'stock');
-      if (!stock.length) { status.textContent = 'In diesem Haushalt sind noch keine Vorräte gespeichert. Füge zuerst Lebensmittel hinzu.'; return }
+      const stock = aiFilteredStock();
+      if (!stock.length) { status.textContent = 'In den ausgewählten Kategorien sind keine Vorräte vorhanden. Wähle weitere Kategorien oder füge Lebensmittel hinzu.'; return }
       button.disabled = true; status.textContent = 'Die KI sucht passende Rezeptideen …'; host.innerHTML = '';
       try {
-        const { data, error } = await client.functions.invoke('recipe-suggestions', { body: { items: stock.map(x => ({ kind: x.kind, name: x.name, qty: x.qty || '1', unit: x.unit || 'Stück', expiry: x.expiry || null, category: x.category || 'Allgemein' })) } });
+        const { data, error } = await client.functions.invoke('recipe-suggestions', { body: { mode: 'recipes', categories: [...selectedStockCategories], items: stock.map(x => ({ kind: x.kind, name: x.name, qty: x.qty || '1', unit: x.unit || 'Stück', expiry: x.expiry || null, category: x.category || 'Allgemein' })) } });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         if (data?.message) status.textContent = data.message; else status.textContent = 'Hier sind deine Rezeptideen:';
@@ -2217,6 +2246,28 @@
       } catch (err) { console.error('Rezeptvorschläge fehlgeschlagen:', err); status.textContent = 'Rezeptvorschläge konnten nicht geladen werden. Prüfe, ob die Edge Function deployed ist und die Anmeldung funktioniert.' + (err?.message ? ' Details: ' + err.message : ''); }
       finally { button.disabled = false }
     });
+    const aiChatHistory = [];
+    function addAiChatMessage(role, text) {
+      const node = document.createElement('div'); node.style.cssText = 'padding:10px 12px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;' + (role === 'user' ? 'background:var(--pale);margin-left:12%' : 'background:#f5f6ef;margin-right:6%');
+      node.textContent = text; $('aiChatMessages').appendChild(node); $('aiChatMessages').scrollTop = $('aiChatMessages').scrollHeight;
+    }
+    $('aiChatForm').addEventListener('submit', async e => {
+      e.preventDefault(); const input = $('aiChatInput'), send = $('aiChatSend'), status = $('recipeStatus');
+      const message = input.value.trim(); if (!message) return;
+      if (!client) { status.textContent = 'Bitte zuerst unter „Cloud-Sync konfigurieren“ deine Supabase-Verbindung einrichten.'; return }
+      if (!currentUser) { status.textContent = 'Bitte zuerst anmelden, damit der KI-Chat aufgerufen werden kann.'; return }
+      const stock = aiFilteredStock();
+      addAiChatMessage('user', message); aiChatHistory.push({ role: 'user', content: message }); input.value = ''; send.disabled = true; status.textContent = 'Die KI denkt nach …';
+      try {
+        const { data, error } = await client.functions.invoke('recipe-suggestions', { body: { mode: 'chat', message, history: aiChatHistory.slice(-12), categories: [...selectedStockCategories], items: stock.map(x => ({ name: x.name, qty: x.qty || '1', unit: x.unit || 'Stück', expiry: x.expiry || null, purchased_at: x.purchased_at || null, category: x.category || 'Allgemein', location: x.location || 'Vorratsschrank' })), shopping: items.filter(x => (x.household_id || 'haushalt-1') === activeHousehold && x.kind === 'shop' && !x.checked).map(x => ({ name: x.name, qty: x.qty || '1', unit: x.unit || 'Stück' })) } });
+        if (error) throw error; if (data?.error) throw new Error(data.error);
+        const answer = data?.answer || data?.reply || data?.message;
+        if (!answer) throw new Error('Die Edge Function liefert noch keine Chat-Antwort. Die Supabase-Funktion „recipe-suggestions“ muss den Modus „chat“ unterstützen.');
+        addAiChatMessage('assistant', String(answer)); aiChatHistory.push({ role: 'assistant', content: String(answer) }); status.textContent = '';
+      } catch (err) { console.error('KI-Chat fehlgeschlagen:', err); addAiChatMessage('assistant', 'Ich konnte gerade nicht antworten. ' + (err?.message || 'Bitte prüfe die Supabase-Edge-Function.')); status.textContent = 'Chat-Anfrage fehlgeschlagen.'; }
+      finally { send.disabled = false; input.focus() }
+    });
+    renderAiCategoryFilter();
     document.addEventListener('click', e => {
       const b = e.target.closest('[data-recipe-missing]'); if (!b) return;
       let recipes = []; try { recipes = JSON.parse($('recipeResults').dataset.recipes || '[]') } catch { }
