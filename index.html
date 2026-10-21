@@ -188,34 +188,13 @@
 }
 
 
-/* Feinabstimmung: Produktinfos kompakter, Aktionsleiste mit etwas mehr Luft nach oben */
-.stock-item .itemname,
-.stock-row .itemname { margin-bottom: 0!important; }
-.stock-item .item-location,
-.stock-row .item-location { margin-top: 0!important; margin-bottom: 2px!important; }
-.stock-item .qty-control,
-.stock-row .qty-control { margin: 3px 0!important; }
-.stock-item .item-meta,
-.stock-row .item-meta { margin-top: 3px!important; margin-bottom: 0!important; }
-.stock-item .note-toggle-row,
-.stock-row .note-toggle-row { margin-top: 3px!important; margin-bottom: 0!important; }
-.stock-item .stock-actions-row,
-.stock-row .stock-actions-row { margin-top: 10px!important; }
-
-
-/* Gleichmäßiger vertikaler Rhythmus im Produktkarten-Header */
-.stock-item .itemname,
-.stock-row .itemname { margin:0 0 5px!important; }
-.stock-item .item-location,
-.stock-row .item-location { margin:0 0 8px!important; }
-.stock-item .qty-control,
-.stock-row .qty-control { margin:0 0 8px!important; }
-.stock-item .item-meta,
-.stock-row .item-meta { margin:0 0 8px!important; }
-.stock-item .note-toggle-row,
-.stock-row .note-toggle-row { margin:0!important; }
-.stock-item .stock-actions-row,
-.stock-row .stock-actions-row { margin-top:8px!important; }
+/* Korrigiertes Spacing: auf die tatsächlich verwendeten Klassen .item/.itemmain anwenden */
+#stockList .itemmain > .itemname { margin:0 0 3px!important; }
+#stockList .itemmain > .meta { margin:0 0 3px!important; line-height:1.3!important; }
+#stockList .itemmain > .qty-control { margin:3px 0 5px!important; }
+#stockList .itemmain > .pill { margin-top:0!important; margin-bottom:0!important; }
+#stockList .item > .stock-actions-row { margin-top:10px!important; }
+#stockList .itemmain { row-gap:0!important; }
 
 </style>
 </head>
