@@ -118,7 +118,6 @@
 /* Notiz: separater Schalter in Aktionszeile, Inhalt als echtes Element darunter.
    Keine display:contents/details-Verschachtelung, damit iOS Safari es korrekt anordnet. */
 .stock-actions-row{
-  margin-top:-3px!important; /* etwas weniger Luft zwischen Status und Aktionsleiste */
   display:flex!important;
   flex-direction:row!important;
   flex-wrap:wrap!important;
@@ -634,3 +633,13 @@ document.addEventListener('input', function(event) {
 });
 
 </script></body></html>
+
+<style>
+/* Feinschliff: Abstand zwischen Statusinformationen und Aktionsleiste angleichen */
+.stock-actions-row {
+  margin-top: 5px !important;
+}
+.itemmain > .pill {
+  margin-bottom: 0 !important;
+}
+</style>
