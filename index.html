@@ -2266,10 +2266,11 @@
       const host = $('aiChatMessages');
       const items = Array.isArray(payload.items) ? payload.items.slice(0, 100) : [];
       latestChatListItems = items;
-      const title = payload.title || (payload.type === 'shopping_list' ? 'Einkaufsliste' : payload.type === 'stock_list' ? 'Vorratsübersicht' : 'Produktliste');
+      const listType = payload.responseType || payload.type || 'general_list';
+      const title = payload.title || (listType === 'shopping_list' ? 'Einkaufsliste' : listType === 'stock_list' ? 'Vorratsübersicht' : 'Produktliste');
       const wrapper = document.createElement('div');
       wrapper.style.cssText = 'margin-right:6%;padding:14px;background:#f9faf5;border:1px solid #e1e5d8;border-radius:12px;overflow-wrap:anywhere';
-      wrapper.innerHTML = `<h3 style="margin:0 0 8px">${esc(title)}</h3>${payload.message ? `<p style="margin:0 0 10px">${esc(payload.message)}</p>` : ''}<div style="display:grid;gap:8px">${items.map((it, i) => `<div style="display:flex;gap:9px;align-items:flex-start;padding:8px;background:white;border-radius:8px"><div style="flex:1"><strong>${esc(it.name || 'Artikel')}</strong>${(it.qty || it.unit) ? `<div class="meta">${esc([it.qty, it.unit].filter(Boolean).join(' '))}</div>` : ''}${it.category ? `<div class="meta">${esc(it.category)}</div>` : ''}${it.notes ? `<div style="font-size:13px;margin-top:3px">${esc(it.notes)}</div>` : ''}</div>${payload.type === 'shopping_list' ? `<button type="button" class="secondary" data-chat-list-add="${i}" style="white-space:nowrap">Hinzufügen</button>` : ''}</div>`).join('')}</div>`;
+      wrapper.innerHTML = `<h3 style="margin:0 0 8px">${esc(title)}</h3>${payload.message ? `<p style="margin:0 0 10px">${esc(payload.message)}</p>` : ''}<div style="display:grid;gap:8px">${items.map((it, i) => `<div style="display:flex;gap:9px;align-items:flex-start;padding:8px;background:white;border-radius:8px"><div style="flex:1"><strong>${esc(it.name || 'Artikel')}</strong>${(it.qty || it.unit) ? `<div class="meta">${esc([it.qty, it.unit].filter(Boolean).join(' '))}</div>` : ''}${it.category ? `<div class="meta">${esc(it.category)}</div>` : ''}${it.notes ? `<div style="font-size:13px;margin-top:3px">${esc(it.notes)}</div>` : ''}</div>${listType === 'shopping_list' ? `<button type="button" class="secondary" data-chat-list-add="${i}" style="white-space:nowrap">Zur Einkaufsliste</button>` : ''}</div>`).join('')}</div>`;
       host.appendChild(wrapper);
       host.scrollTop = host.scrollHeight;
     }
