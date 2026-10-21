@@ -2247,9 +2247,18 @@
       finally { button.disabled = false }
     });
     const aiChatHistory = [];
+    let latestChatRecipes = [];
     function addAiChatMessage(role, text) {
       const node = document.createElement('div'); node.style.cssText = 'padding:10px 12px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;' + (role === 'user' ? 'background:var(--pale);margin-left:12%' : 'background:#f5f6ef;margin-right:6%');
-      node.textContent = text; $('aiChatMessages').appendChild(node); $('aiChatMessages').scrollTop = $('aiChatMessages').scrollHeight;
+      node.textContent = text; $('aiChatMessages').appendChild(node); $('aiChatMessages').scrollTop = $('aiChatMessages').scrollHeight; return node;
+    }
+    function addAiChatRecipeCards(recipes) {
+      const host = $('aiChatMessages');
+      latestChatRecipes = Array.isArray(recipes) ? recipes.slice(0, 3) : [];
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'margin-right:6%;display:grid;gap:10px;';
+      wrapper.innerHTML = latestChatRecipes.map((r, i) => `<article class="card" style="background:#f9faf5;margin:0;padding:14px;border:1px solid #e1e5d8;border-radius:12px"><h3 style="margin:0 0 6px">${esc(r.name || `Rezept ${i + 1}`)}</h3>${r.description ? `<p style="margin:6px 0">${esc(r.description)}</p>` : ''}<div class="meta">⏱ ${esc(r.time_minutes ?? '?')} Minuten</div><h4 style="font-size:14px;margin:12px 0 5px">Zutaten</h4><ul style="margin-top:4px">${(Array.isArray(r.ingredients) ? r.ingredients : []).map(v => `<li>${esc(v)}</li>`).join('')}</ul>${Array.isArray(r.missing) && r.missing.length ? `<h4 style="font-size:14px;margin:12px 0 5px">Fehlt noch</h4><ul style="margin-top:4px">${r.missing.map(v => `<li>${esc(v)}</li>`).join('')}</ul><button type="button" class="secondary" data-chat-recipe-missing="${i}">Fehlende Zutaten auf Einkaufsliste</button>` : ''}<h4 style="font-size:14px;margin:12px 0 5px">Zubereitung</h4><ol style="padding-left:22px">${(Array.isArray(r.steps) ? r.steps : []).map(v => `<li style="margin:5px 0">${esc(v)}</li>`).join('')}</ol></article>`).join('');
+      host.appendChild(wrapper); host.scrollTop = host.scrollHeight;
     }
     $('aiChatForm').addEventListener('submit', async e => {
       e.preventDefault(); const input = $('aiChatInput'), send = $('aiChatSend'), status = $('recipeStatus');
@@ -2263,15 +2272,30 @@
         if (error) throw error; if (data?.error) throw new Error(data.error);
         const answer = data?.answer || data?.reply || data?.message;
         if (!answer) throw new Error('Die Edge Function liefert noch keine Chat-Antwort. Die Supabase-Funktion „recipe-suggestions“ muss den Modus „chat“ unterstützen.');
-        addAiChatMessage('assistant', String(answer)); aiChatHistory.push({ role: 'assistant', content: String(answer) }); status.textContent = '';
+        addAiChatMessage('assistant', String(answer));
+        if (data?.responseType === 'recipes' && Array.isArray(data.recipes) && data.recipes.length) {
+          addAiChatRecipeCards(data.recipes);
+          aiChatHistory.push({ role: 'assistant', content: String(answer) + '\nRezeptvorschläge: ' + data.recipes.map(r => r.name).join(', ') });
+        } else {
+          aiChatHistory.push({ role: 'assistant', content: String(answer) });
+        }
+        status.textContent = '';
       } catch (err) { console.error('KI-Chat fehlgeschlagen:', err); addAiChatMessage('assistant', 'Ich konnte gerade nicht antworten. ' + (err?.message || 'Bitte prüfe die Supabase-Edge-Function.')); status.textContent = 'Chat-Anfrage fehlgeschlagen.'; }
       finally { send.disabled = false; input.focus() }
     });
     renderAiCategoryFilter();
     document.addEventListener('click', e => {
-      const b = e.target.closest('[data-recipe-missing]'); if (!b) return;
-      let recipes = []; try { recipes = JSON.parse($('recipeResults').dataset.recipes || '[]') } catch { }
-      const recipe = recipes[Number(b.dataset.recipeMissing)]; if (!recipe || !Array.isArray(recipe.missing)) return;
+      const chatButton = e.target.closest('[data-chat-recipe-missing]');
+      const recipeButton = e.target.closest('[data-recipe-missing]');
+      if (!chatButton && !recipeButton) return;
+      let recipe;
+      if (chatButton) {
+        recipe = latestChatRecipes[Number(chatButton.dataset.chatRecipeMissing)];
+      } else {
+        let recipes = []; try { recipes = JSON.parse($('recipeResults').dataset.recipes || '[]') } catch { }
+        recipe = recipes[Number(recipeButton.dataset.recipeMissing)];
+      }
+      if (!recipe || !Array.isArray(recipe.missing)) return;
       let added = 0;
       recipe.missing.forEach(raw => { const name = String(raw || '').trim(); if (!name) return; const duplicate = items.some(x => x.kind === 'shop' && (x.household_id || 'haushalt-1') === activeHousehold && !x.checked && (x.name || '').trim().toLocaleLowerCase('de') === name.toLocaleLowerCase('de')); if (!duplicate) { items.push({ id: uid(), household_id: activeHousehold, kind: 'shop', name, qty: '1', unit: 'Stück', notes: 'Für Rezept: ' + String(recipe.name || 'Rezept'), category: 'Allgemein', checked: false, updated_at: new Date().toISOString() }); added++ } });
       saveLocal(); render(); queueSync(); $('recipeStatus').textContent = added ? `${added} fehlende Zutat${added === 1 ? ' wurde' : 'en wurden'} zur Einkaufsliste hinzugefügt.` : 'Diese Zutaten stehen bereits auf deiner Einkaufsliste.';
