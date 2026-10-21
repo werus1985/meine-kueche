@@ -179,6 +179,53 @@
  .stock-actions-row .iconbtn{padding:5px 7px!important;min-height:32px!important;font-size:10px!important}
 }
 
+
+/* Final fix: keep the note toggle and actions on one line; expanded note spans below it. */
+.stock-actions-row{
+  display:flex!important;
+  flex-direction:row!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:5px!important;
+  position:relative!important;
+  overflow:visible!important;
+}
+.stock-actions-row .note-expand{display:contents!important;margin:0!important;padding:0!important}
+.stock-actions-row .note-expand summary{
+  order:0!important;
+  margin-right:auto!important;
+  flex:0 0 auto!important;
+  width:auto!important;
+  max-width:none!important;
+  white-space:nowrap!important;
+  align-self:center!important;
+  padding:5px 0!important;
+  font-size:11px!important;
+  line-height:1.2!important;
+}
+.stock-actions-row .note-expand summary:after{content:"＋"!important;margin-left:5px!important}
+.stock-actions-row .note-expand[open] summary:after{content:"−"!important}
+.stock-actions-row .note-content{
+  order:5!important;
+  display:block!important;
+  flex:0 0 100%!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+  margin:3px 0 0!important;
+  position:static!important;
+  padding:9px 11px!important;
+  border-radius:10px!important;
+  overflow-wrap:anywhere!important;
+  white-space:pre-wrap!important;
+  font-size:12px!important;
+  line-height:1.4!important;
+}
+.stock-actions-row .iconbtn{order:1!important;position:relative!important;z-index:2!important}
+.stock-actions-row .note-expand[open] .note-content{clear:both!important}
+
 </style>
 </head>
 <body><main class="wrap">
