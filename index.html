@@ -2260,6 +2260,34 @@
       wrapper.innerHTML = latestChatRecipes.map((r, i) => `<article class="card" style="background:#f9faf5;margin:0;padding:14px;border:1px solid #e1e5d8;border-radius:12px"><h3 style="margin:0 0 6px">${esc(r.name || `Rezept ${i + 1}`)}</h3>${r.description ? `<p style="margin:6px 0">${esc(r.description)}</p>` : ''}<div class="meta">⏱ ${esc(r.time_minutes ?? '?')} Minuten</div><h4 style="font-size:14px;margin:12px 0 5px">Zutaten</h4><ul style="margin-top:4px">${(Array.isArray(r.ingredients) ? r.ingredients : []).map(v => `<li>${esc(v)}</li>`).join('')}</ul>${Array.isArray(r.missing) && r.missing.length ? `<h4 style="font-size:14px;margin:12px 0 5px">Fehlt noch</h4><ul style="margin-top:4px">${r.missing.map(v => `<li>${esc(v)}</li>`).join('')}</ul><button type="button" class="secondary" data-chat-recipe-missing="${i}">Fehlende Zutaten auf Einkaufsliste</button>` : ''}<h4 style="font-size:14px;margin:12px 0 5px">Zubereitung</h4><ol style="padding-left:22px">${(Array.isArray(r.steps) ? r.steps : []).map(v => `<li style="margin:5px 0">${esc(v)}</li>`).join('')}</ol></article>`).join('');
       host.appendChild(wrapper); host.scrollTop = host.scrollHeight;
     }
+
+    let latestChatListItems = [];
+    function addAiChatListCard(payload) {
+      const host = $('aiChatMessages');
+      const items = Array.isArray(payload.items) ? payload.items.slice(0, 100) : [];
+      latestChatListItems = items;
+      const title = payload.title || (payload.type === 'shopping_list' ? 'Einkaufsliste' : payload.type === 'stock_list' ? 'Vorratsübersicht' : 'Produktliste');
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'margin-right:6%;padding:14px;background:#f9faf5;border:1px solid #e1e5d8;border-radius:12px;overflow-wrap:anywhere';
+      wrapper.innerHTML = `<h3 style="margin:0 0 8px">${esc(title)}</h3>${payload.message ? `<p style="margin:0 0 10px">${esc(payload.message)}</p>` : ''}<div style="display:grid;gap:8px">${items.map((it, i) => `<div style="display:flex;gap:9px;align-items:flex-start;padding:8px;background:white;border-radius:8px"><div style="flex:1"><strong>${esc(it.name || 'Artikel')}</strong>${(it.qty || it.unit) ? `<div class="meta">${esc([it.qty, it.unit].filter(Boolean).join(' '))}</div>` : ''}${it.category ? `<div class="meta">${esc(it.category)}</div>` : ''}${it.notes ? `<div style="font-size:13px;margin-top:3px">${esc(it.notes)}</div>` : ''}</div>${payload.type === 'shopping_list' ? `<button type="button" class="secondary" data-chat-list-add="${i}" style="white-space:nowrap">Hinzufügen</button>` : ''}</div>`).join('')}</div>`;
+      host.appendChild(wrapper);
+      host.scrollTop = host.scrollHeight;
+    }
+    document.addEventListener('click', e => {
+      const button = e.target.closest('[data-chat-list-add]');
+      if (!button) return;
+      const it = latestChatListItems[Number(button.dataset.chatListAdd)];
+      if (!it || !it.name) return;
+      const name = String(it.name).trim();
+      const duplicate = items.some(x => x.kind === 'shop' && (x.household_id || 'haushalt-1') === activeHousehold && !x.checked && (x.name || '').trim().toLocaleLowerCase('de') === name.toLocaleLowerCase('de'));
+      if (!duplicate) {
+        items.push({ id: uid(), household_id: activeHousehold, kind: 'shop', name, qty: String(it.qty || '1'), unit: String(it.unit || 'Stück'), notes: String(it.notes || 'Aus dem KI-Chat'), category: String(it.category || 'Allgemein'), checked: false, updated_at: new Date().toISOString() });
+        saveLocal(); render(); queueSync();
+      }
+      button.textContent = duplicate ? 'Bereits vorhanden' : 'Hinzugefügt';
+      button.disabled = true;
+    });
+
     $('aiChatForm').addEventListener('submit', async e => {
       e.preventDefault(); const input = $('aiChatInput'), send = $('aiChatSend'), status = $('recipeStatus');
       const message = input.value.trim(); if (!message) return;
@@ -2276,7 +2304,11 @@
         if (data?.responseType === 'recipes' && Array.isArray(data.recipes) && data.recipes.length) {
           addAiChatRecipeCards(data.recipes);
           aiChatHistory.push({ role: 'assistant', content: String(answer) + '\nRezeptvorschläge: ' + data.recipes.map(r => r.name).join(', ') });
+        } else if (['shopping_list', 'product_list', 'stock_list', 'general_list'].includes(data?.responseType) && Array.isArray(data.items)) {
+          addAiChatListCard(data);
+          aiChatHistory.push({ role: 'assistant', content: String(answer) + '\n' + (data.title || data.responseType) + ': ' + data.items.map(x => x.name).join(', ') });
         } else {
+          addAiChatMessage('assistant', String(answer).replace(/\*\*(.*?)\*\*/g, '$1').replace(/^#{1,6}\s+/gm, '').replace(/^[-*]\s+/gm, '• '));
           aiChatHistory.push({ role: 'assistant', content: String(answer) });
         }
         status.textContent = '';
