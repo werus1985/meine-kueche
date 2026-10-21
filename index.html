@@ -614,14 +614,15 @@
       text-align: left
     }
 
+  /* Rein informative Hinweise: gleiche kompakte Darstellung wie normale Pills */
   .date-pill{
-  position:relative;
-  display:inline-flex;
-  align-items:center;
-  min-height:44px;
+  display:inline-block;
+  min-height:0;
+  height:auto;
   vertical-align:middle;
-  overflow:hidden;
-  touch-action:manipulation;
+  overflow:visible;
+  touch-action:auto;
+  padding:3px 8px;
 }
 
     .missing-expiry,
@@ -1496,8 +1497,10 @@
       min-height: 38px !important
     }
 
-    .stock-actions-row .missing-expiry {
-      cursor: pointer
+    .stock-actions-row .missing-expiry,
+    .stock-actions-row .missing-date {
+      cursor: default !important;
+      pointer-events: none;
     }
 
     .stock-actions-row button[data-addshop].needs-restock {
