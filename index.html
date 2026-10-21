@@ -24,178 +24,7 @@
 .stock-outline-icon{display:inline-block;width:22px;height:22px;flex:0 0 22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
 .tab .stock-outline-icon{margin-right:5px}
 @media(max-width:599px){.tabs:not(.sub-tabs){display:none}.mobile-section-nav{display:block}.top{padding-top:18px}.top h1{font-size:28px}.status{max-width:145px;white-space:normal;text-align:center}}
-
-/* Maximal kompakte Artikelliste – Kategorie, Haltbarkeit und Lagerort bleiben sichtbar */
-.item{
-  display:flex!important;flex-wrap:wrap!important;align-items:flex-start!important;
-  gap:3px 6px!important;padding:7px 0!important;border-bottom:1px solid var(--line)!important;
-}
-.itemmain{display:block!important;flex:1 1 100%!important;width:100%!important;min-width:0!important;line-height:1.2!important}
-.itemname{display:block!important;font-size:14px!important;line-height:1.2!important;margin:0 48px 2px 0!important}
-.meta{font-size:10px!important;line-height:1.2!important;margin:1px 0!important}
-.product-photo{
-  width:38px!important;height:38px!important;float:right!important;
-  margin:0 0 3px 6px!important;border-radius:7px!important;
-}
-.qty-control{display:flex!important;align-items:center!important;gap:4px!important;margin:3px 0!important}
-.qty-control button{width:25px!important;min-width:25px!important;height:25px!important;padding:0!important;font-size:15px!important;border-radius:7px!important}
-.qty-control input{width:46px!important;max-width:46px!important;height:25px!important;padding:2px!important;font-size:13px!important;border-radius:7px!important}
-.qty-control .qty-unit{font-size:10px!important}
-.itemmain>.pill{
-  display:inline-block!important;width:auto!important;max-width:100%!important;
-  font-size:9px!important;line-height:1.2!important;padding:2px 5px!important;
-  margin:2px 3px 0 0!important;vertical-align:middle!important;
-}
-.note-expand{margin:2px 0 0!important;font-size:10px!important;line-height:1.2!important}
-.note-expand summary{font-size:10px!important;padding:1px 0!important}
-.note-content{padding:5px 7px!important;margin-top:2px!important;font-size:11px!important}
-.item>.row{
-  width:100%!important;display:flex!important;justify-content:flex-end!important;
-  align-items:center!important;gap:4px!important;flex-wrap:nowrap!important;
-}
-.item>.row .iconbtn{
-  min-height:25px!important;padding:3px 7px!important;font-size:10px!important;
-  border-radius:8px!important;white-space:nowrap!important;
-}
-.itemmain>[data-buy-needed]{
-  display:inline-block!important;padding:4px 7px!important;font-size:10px!important;
-  margin:2px 0!important;border-radius:7px!important;
-}
-#stockList,#shopList{padding:6px 10px!important}
-#stockList .item:last-child,#shopList .item:last-child{padding-bottom:0!important}
-@media(max-width:599px){
-  #stockList,#shopList{padding:5px 8px!important}
-  .item{padding:6px 0!important;gap:2px 4px!important}
-  .itemname{font-size:13px!important}
-  .product-photo{width:34px!important;height:34px!important}
-  .item>.row .iconbtn{font-size:9px!important;padding:3px 5px!important}
-  .itemmain>.pill{font-size:9px!important;padding:2px 4px!important;margin-right:2px!important}
-  .qty-control button{width:24px!important;min-width:24px!important;height:24px!important}
-  .qty-control input{width:42px!important;max-width:42px!important;height:24px!important}
-}
-
-
-/* UI-Nachbesserung nach Smartphone-Vorschau */
-.item{padding:8px 0!important;gap:3px 6px!important}
-.itemname{font-size:14px!important;line-height:1.25!important}
-.product-photo{width:54px!important;height:54px!important;border-radius:9px!important;margin:0 0 4px 8px!important}
-.qty-control button{width:29px!important;min-width:29px!important;height:29px!important;font-size:17px!important}
-.qty-control input{width:52px!important;max-width:52px!important;height:29px!important;font-size:14px!important}
-.note-expand{margin:1px 0 0!important;font-size:11px!important}
-.note-expand summary{font-size:11px!important;padding:2px 0!important}
-.item>.row{gap:6px!important;align-items:center!important}
-.item>.row .iconbtn{
-  min-height:38px!important;padding:7px 10px!important;font-size:12px!important;
-  border-radius:10px!important;display:inline-flex!important;align-items:center!important;
-  justify-content:center!important;gap:5px!important;
-}
-@media(max-width:599px){
-  .product-photo{width:52px!important;height:52px!important}
-  .item>.row .iconbtn{min-height:40px!important;padding:7px 10px!important;font-size:12px!important}
-}
-
-
-/* Feinschliff: dezente Linien-Icons, Notiz unten links, Aktionsbuttons etwas kleiner */
-.action-line-icon{width:15px;height:15px;flex:0 0 15px;display:inline-block;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.itemmain{position:relative}
-.note-expand{display:block!important;width:100%!important;clear:both!important;margin:3px 0 0!important;font-size:11px!important;line-height:1.2!important}
-.note-expand summary{display:inline-flex!important;align-items:center!important;list-style:none!important;cursor:pointer!important;color:var(--green)!important;font-size:11px!important;font-weight:600!important;padding:2px 0!important}
-.note-expand summary::-webkit-details-marker{display:none}
-.item>.row .iconbtn{
-  min-height:34px!important;padding:5px 9px!important;font-size:11px!important;
-  border-radius:9px!important;gap:5px!important;display:inline-flex!important;
-  align-items:center!important;justify-content:center!important
-}
-.item>.row .iconbtn .action-line-icon{width:14px;height:14px;flex-basis:14px}
-.product-photo{width:58px!important;height:58px!important}
-@media(max-width:599px){
-  .item>.row .iconbtn{min-height:34px!important;padding:5px 8px!important;font-size:11px!important}
-  .product-photo{width:56px!important;height:56px!important}
-}
-
-
-
-/* Notiz: separater Schalter in Aktionszeile, Inhalt als echtes Element darunter.
-   Keine display:contents/details-Verschachtelung, damit iOS Safari es korrekt anordnet. */
-.stock-actions-row{
-  display:flex!important;
-  flex-direction:row!important;
-  flex-wrap:wrap!important;
-  align-items:center!important;
-  justify-content:flex-end!important;
-  gap:5px!important;
-  width:100%!important;
-  position:relative!important;
-  overflow:visible!important;
-}
-.stock-actions-row .note-toggle{
-  order:0!important;
-  margin-right:auto!important;
-  flex:0 0 auto!important;
-  align-self:center!important;
-  border:0!important;
-  background:transparent!important;
-  color:var(--green)!important;
-  font:600 11px/1.2 inherit!important;
-  padding:5px 0!important;
-  white-space:nowrap!important;
-  cursor:pointer!important;
-}
-.stock-actions-row .note-toggle:after{content:"＋";margin-left:5px;font-size:13px}
-.stock-actions-row .note-toggle[aria-expanded="true"]:after{content:"−"}
-.stock-actions-row .iconbtn{order:1!important;align-self:center!important}
-.note-content-below{
-  display:block!important;
-  clear:both!important;
-  width:100%!important;
-  box-sizing:border-box!important;
-  margin:7px 0 0!important;
-  padding:10px 12px!important;
-  border-radius:10px!important;
-  background:#f5f6ef!important;
-  color:var(--ink)!important;
-  font-size:12px!important;
-  line-height:1.4!important;
-  white-space:pre-wrap!important;
-  overflow-wrap:anywhere!important;
-}
-.note-content-below[hidden]{display:none!important}
-@media(max-width:599px){
-  .stock-actions-row{gap:4px!important}
-  .stock-actions-row .note-toggle{font-size:11px!important}
-}
-
-
-/* Lesbarkeit: Produktdaten etwas kräftiger, passend zur Aktionsleiste */
-.itemname{font-size:15px!important;line-height:1.25!important}
-.itemmain .meta{font-size:13px!important;line-height:1.35!important}
-.itemmain .pill{font-size:11.5px!important;padding:4px 9px!important}
-.qty-control{margin:9px 0!important}
-.qty-control button{width:38px!important;min-width:38px!important;height:38px!important}
-.qty-control input{font-size:15px!important;min-height:38px!important}
-.stock-actions-row .missing-expiry{cursor:pointer}
-.stock-actions-row button[data-addshop].needs-restock{
-  color:#b83c35!important;
-  border-color:#e7b7b2!important;
-  background:#fae9e7!important;
-}
-.stock-actions-row button[data-addshop].needs-restock svg{stroke:#b83c35!important}
-.note-content-below{padding:0!important;background:transparent!important}
-.note-content-below textarea{
-  display:block;width:100%;min-height:70px;box-sizing:border-box;
-  border:1px solid var(--line);border-radius:10px;background:#fffefa;
-  padding:10px 12px;color:var(--ink);font:inherit;font-size:13px;resize:vertical;
-}
-
-
-/* Korrigiertes Spacing: auf die tatsächlich verwendeten Klassen .item/.itemmain anwenden */
-#stockList .itemmain > .itemname { margin:0 0 3px!important; }
-#stockList .itemmain > .meta { margin:0 0 3px!important; line-height:1.3!important; }
-#stockList .itemmain > .qty-control { margin:3px 0 5px!important; }
-#stockList .itemmain > .pill { margin-top:0!important; margin-bottom:0!important; }
-#stockList .item > .stock-actions-row { margin-top:10px!important; }
-#stockList .itemmain { row-gap:0!important; }
-
+.stock-location-category{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px}.stock-location-category .meta{margin-top:0}.stock-location-category .stock-category{margin-top:0}.stock-statuses{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.stock-statuses .pill{margin-top:0}.stock-item-main .qty-control{margin:6px 0}.stock-item-main .note-expand{margin-top:6px}
 </style>
 </head>
 <body><main class="wrap">
@@ -318,7 +147,7 @@ function renderStockCategoryFilters(){
  selectedStockCategories=selectedStockCategories.filter(c=>categories.includes(c));
  const summary=$('activeCategoryFilterSummary');if(summary)summary.textContent=selectedStockCategories.length?`${selectedStockCategories.length} ausgewählt`:'Alle Kategorien';
  $('categoryFilterChoices').innerHTML=categories.map(c=>`<label class="category-chip" style="cursor:pointer"><input type="checkbox" data-stock-category="${esc(c)}" ${selectedStockCategories.includes(c)?'checked':''} style="width:16px;height:16px;margin:0;accent-color:var(--green)"> ${esc(c)}</label>`).join('');
- $('quickFilters').innerHTML=quickFilters.map((f,i)=>`<span class="category-chip"><button type="button" data-apply-quick-filter="${i}" style="background:transparent;color:var(--green);padding:2px 4px;font-weight:700">${esc(f.name)}</button><button type="button" data-delete-quick-filter="${i}" aria-label="Schnellfilter ${esc(f.name)} löschen">🗑️</button></span>`).join('')||'<span class="small">Noch keine Schnellfilter gespeichert.</span>';
+ $('quickFilters').innerHTML=quickFilters.map((f,i)=>`<span class="category-chip"><button type="button" data-apply-quick-filter="${i}" style="background:transparent;color:var(--green);padding:2px 4px;font-weight:700">${esc(f.name)}</button><button type="button" data-delete-quick-filter="${i}" aria-label="Schnellfilter ${esc(f.name)} löschen">✕</button></span>`).join('')||'<span class="small">Noch keine Schnellfilter gespeichert.</span>';
 }
 function saveHouseholds(){localStorage.setItem('kueche-v1-households',JSON.stringify(households));localStorage.setItem('kueche-v1-active-household',activeHousehold)}
 function renderHouseholds(){const sel=$('householdSelect');sel.innerHTML=households.map(h=>`<option value="${esc(h.id)}">${esc(h.name)}</option>`).join('');sel.value=activeHousehold;$('householdLimit').textContent=`${households.length} von 5`;const atLimit=households.length>=5;$('newHousehold').disabled=atLimit;$('householdForm').querySelector('button').disabled=atLimit;$('newHousehold').placeholder=atLimit?'Maximal 5 Haushalte erreicht':'Neuen Haushalt anlegen'}
@@ -331,7 +160,7 @@ function quantityControl(x){const q=qtyNumber(x.qty??'1'),u=x.unit||'Stück';ret
 function setItemQuantity(id,value){const x=items.find(y=>y.id===id);if(!x)return;const raw=String(value??'').trim().replace(',','.');if(!raw||!Number.isFinite(Number(raw))||Number(raw)<0){alert('Bitte eine gültige Menge ab 0 eingeben.');render();return}x.qty=fmtQty(Number(raw));x.updated_at=new Date().toISOString();saveLocal();render();queueSync()}
 async function pushUnitSteps(){if(!client||!currentUser)return;const rows=units.map(unit=>({unit_name:unit,step_size:stepFor(unit),updated_at:new Date().toISOString()}));if(rows.length){const {error}=await client.from('kitchen_unit_steps').upsert(rows,{onConflict:'unit_name'});if(error)throw error}}
 async function pullUnitSteps(){if(!client||!currentUser)return;const {data,error}=await client.from('kitchen_unit_steps').select('unit_name,step_size,updated_at');if(error)throw error;if(data&&data.length){data.forEach(r=>{const n=Number(r.step_size);if(r.unit_name&&Number.isFinite(n)&&n>0)unitSteps[r.unit_name]=n});saveSettings();renderSettings()}}
-function renderSettings(){const unitEls=[$('unit'),$('shopUnit')];unitEls.forEach(el=>{const val=el.value;el.innerHTML=units.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('');if(units.includes(val))el.value=val});const loc=$('location'),old=loc.value;loc.innerHTML=locationsFor().map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');if(locationsFor().includes(old))loc.value=old;$('locationList').innerHTML=locationsFor().map(v=>`<span class="category-chip">${esc(v)} <button type="button" data-location-rename="${esc(v)}" aria-label="${esc(v)} umbenennen">✎</button><button type="button" data-location-delete="${esc(v)}" aria-label="${esc(v)} löschen">🗑️</button></span>`).join('')||'<span class="small">Noch keine eigenen Lagerorte.</span>';$('unitList').innerHTML=units.map(v=>`<span class="category-chip">${esc(v)} <button type="button" data-unit-rename="${esc(v)}" aria-label="${esc(v)} umbenennen">✎</button><button type="button" data-unit-delete="${esc(v)}" aria-label="${esc(v)} löschen">🗑️</button></span>`).join('');const stepList=$('unitStepList');if(stepList)stepList.innerHTML=units.map(v=>`<div class="unit-step-row"><label for="step-${esc(v)}">${esc(v)} · Schrittgröße</label><input id="step-${esc(v)}" type="text" inputmode="decimal" data-unit-step="${esc(v)}" value="${esc(fmtQty(stepFor(v)))}" aria-label="Schrittgröße für ${esc(v)}"></div>`).join('')}
+function renderSettings(){const unitEls=[$('unit'),$('shopUnit')];unitEls.forEach(el=>{const val=el.value;el.innerHTML=units.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('');if(units.includes(val))el.value=val});const loc=$('location'),old=loc.value;loc.innerHTML=locationsFor().map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');if(locationsFor().includes(old))loc.value=old;$('locationList').innerHTML=locationsFor().map(v=>`<span class="category-chip">${esc(v)} <button type="button" data-location-rename="${esc(v)}" aria-label="${esc(v)} umbenennen">✎</button><button type="button" data-location-delete="${esc(v)}" aria-label="${esc(v)} löschen">✕</button></span>`).join('')||'<span class="small">Noch keine eigenen Lagerorte.</span>';$('unitList').innerHTML=units.map(v=>`<span class="category-chip">${esc(v)} <button type="button" data-unit-rename="${esc(v)}" aria-label="${esc(v)} umbenennen">✎</button><button type="button" data-unit-delete="${esc(v)}" aria-label="${esc(v)} löschen">✕</button></span>`).join('');const stepList=$('unitStepList');if(stepList)stepList.innerHTML=units.map(v=>`<div class="unit-step-row"><label for="step-${esc(v)}">${esc(v)} · Schrittgröße</label><input id="step-${esc(v)}" type="text" inputmode="decimal" data-unit-step="${esc(v)}" value="${esc(fmtQty(stepFor(v)))}" aria-label="Schrittgröße für ${esc(v)}"></div>`).join('')}
 function renderCategories(){
  const selected=$('category').value;
  $('category').innerHTML=categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
@@ -358,8 +187,8 @@ function render(){
  $('stockCount').textContent=`${stock.length} Produkt${stock.length===1?'':'e'}`;$('shoppingCount').textContent=shop.filter(x=>!x.checked).length?`(${shop.filter(x=>!x.checked).length})`:'';
  const urgent=stock.filter(x=>x.expiry&&daysUntil(x.expiry)<=ruleFor(x.category||'Allgemein').yellowDays).sort((a,b)=>a.expiry.localeCompare(b.expiry));
  $('alertArea').innerHTML=urgent.length?`<div class="notice">${urgent.some(x=>daysUntil(x.expiry)<0)?'⚠️ Abgelaufene Produkte: ':'⏰ Bald aufbrauchen: '}${urgent.slice(0,3).map(x=>esc(x.name)).join(', ')}${urgent.length>3?' …':''}</div>`:'';
- $('stockList').innerHTML=stock.length?stock.slice().sort((a,b)=>compareStock(a,b,activeSort())).map(x=>`<div class="item"><div class="itemmain">${(x.photoPath||x.photoData||x.productImage)?`<img class="product-photo" data-photo-id="${esc(x.id)}" src="${esc(x.photoUrl||x.photoData||x.productImage||'')}" alt="Foto ${esc(x.name)}">`:``}<div class="itemname">${esc(x.name)}</div><div class="meta">${esc(x.location||'Vorratsschrank')}</div>${quantityControl(x)}<span class="pill">${esc(x.category||'Allgemein')}</span> ${x.expiry?`<span class="pill ${expiryClass(x.expiry,x.category||'Allgemein')}">${esc(expiryLabel(x.expiry))}</span>`:'<button type="button" class="pill missing-expiry" data-expiry-edit="${x.id}">⚠ Haltbarkeit fehlt</button>'} <span class="pill ${ageClass(x.purchased_at,x.category||'Allgemein')}">${esc(ageLabel(x.purchased_at))}</span></div><div class="row stock-actions-row" style="align-items:center;flex-wrap:wrap"><button type="button" class="note-toggle" data-note-toggle="${esc(x.id)}" aria-expanded="false">Notiz</button><button class="iconbtn edit-subtle" data-edit="${x.id}"><svg class="action-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5Z"/><path d="m13.8 6.7 3.5 3.5"/></svg>Bearbeiten</button><button class="iconbtn ${qtyNumber(x.qty??'1')===0?'needs-restock':''}" data-addshop="${x.id}" aria-label="${qtyNumber(x.qty??'1')===0?'Nachkaufen':'Einkauf'}"><svg class="action-line-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3.5h2.2l2.4 11.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 1.9-1.4l2-7.4H6"/></svg>${qtyNumber(x.qty??'1')===0?'Nachkaufen':'Einkauf'}</button><button class="iconbtn" data-delete="${x.id}" aria-label="Löschen" title="Löschen"><svg class="action-line-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13M10 10v7m4-7v7"/></svg></button></div><div class="note-content note-content-below" data-note-content="${esc(x.id)}" hidden><textarea data-note-input="${esc(x.id)}" aria-label="Notiz für ${esc(x.name)}" maxlength="500" rows="3" placeholder="Notiz direkt hier eingeben …">${esc(x.notes||'')}</textarea></div></div>`).join(''):`<div class="empty"><strong>Noch ist der Vorrat leer</strong>Füge oben dein erstes Lebensmittel hinzu.</div>`;
- $('shopList').innerHTML=shop.length?shop.sort((a,b)=>Number(a.checked)-Number(b.checked)).map(x=>`<div class="item"><input class="check" type="checkbox" data-check="${x.id}" ${x.checked?'checked':''} aria-label="${esc(x.name)} erledigt"><div class="itemmain">${(x.photoPath||x.photoData||x.productImage)?`<img class="product-photo" data-photo-id="${esc(x.id)}" src="${esc(x.photoUrl||x.photoData||x.productImage||'')}" alt="Foto ${esc(x.name)}">`:``}<div class="itemname" style="${x.checked?'text-decoration:line-through;color:var(--muted)':''}">${esc(x.name)}</div><div class="meta">${x.checked?'Erledigt':'Noch einkaufen'}</div>${quantityControl(x)}<span class="pill">${esc(x.category||'Allgemein')}</span>${x.expiry?` <span class="pill ${expiryClass(x.expiry,x.category||'Allgemein')}">MHD: ${esc(x.expiry)}</span>`:''}${x.notes?`<div class="meta">📝 ${esc(x.notes)}</div>`:''}</div><div class="row" style="flex-wrap:wrap"><button class="iconbtn" data-edit="${x.id}">✏️ Bearbeiten</button><button class="iconbtn" data-buy="${x.id}">In Vorrat</button><button class="iconbtn" data-delete="${x.id}">🗑️</button></div></div>`).join(''):`<div class="empty"><strong>Alles im Haus?</strong>Füge oben hinzu, was du einkaufen möchtest.</div>`;
+ $('stockList').innerHTML=stock.length?stock.slice().sort((a,b)=>compareStock(a,b,activeSort())).map(x=>`<div class="item"><div class="itemmain stock-item-main">${(x.photoPath||x.photoData||x.productImage)?`<img class="product-photo" data-photo-id="${esc(x.id)}" src="${esc(x.photoUrl||x.photoData||x.productImage||'')}" alt="Foto ${esc(x.name)}">`:``}<div class="itemname">${esc(x.name)}</div><div class="stock-location-category"><span class="meta">${esc(x.location||'Vorratsschrank')}</span><span class="pill stock-category">${esc(x.category||'Allgemein')}</span></div>${quantityControl(x)}<div class="stock-statuses">${x.expiry?`<span class="pill ${expiryClass(x.expiry,x.category||'Allgemein')}">${esc(expiryLabel(x.expiry))}</span>`:'<button type="button" class="pill missing-expiry" data-expiry-edit="'+esc(x.id)+'">⚠ Haltbarkeit fehlt</button>'}<span class="pill ${ageClass(x.purchased_at,x.category||'Allgemein')}">${esc(ageLabel(x.purchased_at))}</span></div><details class="note-expand"><summary>${x.notes?'Notiz anzeigen':'＋ Notiz hinzufügen'}</summary><div class="note-content">${x.notes?esc(x.notes):'<span class="small">Noch keine Notiz vorhanden. Über „Bearbeiten“ kannst du eine hinzufügen.</span>'}</div></details></div><div class="row" style="align-items:flex-start;flex-wrap:wrap"><button class="iconbtn edit-subtle" data-edit="${x.id}">Bearbeiten</button><button class="iconbtn" data-addshop="${x.id}" aria-label="Auf Einkaufsliste">＋ Einkauf</button><button class="iconbtn" data-delete="${x.id}" aria-label="Löschen">✕</button></div></div>`).join(''):`<div class="empty"><strong>Noch ist der Vorrat leer</strong>Füge oben dein erstes Lebensmittel hinzu.</div>`;
+ $('shopList').innerHTML=shop.length?shop.sort((a,b)=>Number(a.checked)-Number(b.checked)).map(x=>`<div class="item"><input class="check" type="checkbox" data-check="${x.id}" ${x.checked?'checked':''} aria-label="${esc(x.name)} erledigt"><div class="itemmain">${(x.photoPath||x.photoData||x.productImage)?`<img class="product-photo" data-photo-id="${esc(x.id)}" src="${esc(x.photoUrl||x.photoData||x.productImage||'')}" alt="Foto ${esc(x.name)}">`:``}<div class="itemname" style="${x.checked?'text-decoration:line-through;color:var(--muted)':''}">${esc(x.name)}</div><div class="meta">${x.checked?'Erledigt':'Noch einkaufen'}</div>${quantityControl(x)}<span class="pill">${esc(x.category||'Allgemein')}</span>${x.expiry?` <span class="pill ${expiryClass(x.expiry,x.category||'Allgemein')}">MHD: ${esc(x.expiry)}</span>`:''}${x.notes?`<div class="meta">📝 ${esc(x.notes)}</div>`:''}</div><div class="row" style="flex-wrap:wrap"><button class="iconbtn" data-edit="${x.id}">Bearbeiten</button><button class="iconbtn" data-buy="${x.id}">In Vorrat</button><button class="iconbtn" data-delete="${x.id}">✕</button></div></div>`).join(''):`<div class="empty"><strong>Alles im Haus?</strong>Füge oben hinzu, was du einkaufen möchtest.</div>`;
  $('clearChecked').classList.toggle('hidden',!shop.some(x=>x.checked));
  refreshPrivatePhotoUrls();
 }
@@ -488,7 +317,7 @@ function editItem(id){
  const isStock=x.kind==='stock';
  const locs=locationsFor(x.household_id||activeHousehold);
  const backdrop=document.createElement('div');backdrop.id='itemEditBackdrop';backdrop.className='edit-backdrop';
- backdrop.innerHTML=`<section class="edit-dialog" role="dialog" aria-modal="true" aria-labelledby="editDialogTitle"><div class="row between"><h2 id="editDialogTitle">${isStock?'Vorrat bearbeiten':'Einkaufsartikel bearbeiten'}</h2><button type="button" class="iconbtn" data-edit-close aria-label="Schließen">🗑️</button></div>
+ backdrop.innerHTML=`<section class="edit-dialog" role="dialog" aria-modal="true" aria-labelledby="editDialogTitle"><div class="row between"><h2 id="editDialogTitle">${isStock?'Vorrat bearbeiten':'Einkaufsartikel bearbeiten'}</h2><button type="button" class="iconbtn" data-edit-close aria-label="Schließen">✕</button></div>
  <form id="itemEditForm"><div class="formgrid" style="margin-top:14px">
  <div class="field full"><label for="editName">Produktname</label><input id="editName" maxlength="90" required value="${esc(x.name)}"></div>
  <div class="field"><label for="editQty">Menge</label><input id="editQty" class="qty-input" type="number" inputmode="decimal" min="0" step="any" value="${esc(String(x.qty||'1').match(/-?\d+(?:[.,]\d+)?/)?.[0].replace(',','.')||'1')}" required></div>
@@ -604,48 +433,4 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     }
   });
 }
-
-
-document.addEventListener('click', function(event) {
-  const toggle = event.target.closest('[data-note-toggle]');
-  if (!toggle) return;
-  const id = toggle.getAttribute('data-note-toggle');
-  const item = toggle.closest('.item');
-  if (!item) return;
-  const panel = item.querySelector('[data-note-content="' + CSS.escape(id) + '"]');
-  if (!panel) return;
-  const opening = panel.hidden;
-  panel.hidden = !opening;
-  toggle.setAttribute('aria-expanded', opening ? 'true' : 'false');
-});
-
-
-
-document.addEventListener('input', function(event) {
-  const field = event.target.closest('[data-note-input]');
-  if (!field) return;
-  const item = items.find(entry => String(entry.id) === String(field.getAttribute('data-note-input')));
-  if (!item) return;
-  item.notes = field.value;
-  item.updated_at = new Date().toISOString();
-  saveLocal();
-  queueSync();
-});
-
 </script></body></html>
-
-<style>
-/* Feinschliff: Abstand zwischen Statusinformationen und Aktionsleiste angleichen */
-.stock-actions-row {
-  margin-top: 5px !important;
-}
-.itemmain > .pill {
-  margin-bottom: 0 !important;
-}
-</style>
-
-<style id="spacing-final-correction">
-/* Vorratskarten: Abstand zwischen Status-Chips und Aktionsleiste an die übrigen Abstände angleichen */
-#stockList .item { row-gap: 4px !important; }
-#stockList .item > .stock-actions-row { margin-top: 4px !important; }
-</style>
