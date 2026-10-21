@@ -2109,6 +2109,40 @@
       const cr = e.target.closest('[data-cat-rename]'); if (cr) { const old = cr.dataset.catRename; const name = prompt('Kategorie umbenennen:', old); if (name === null) return; const clean = name.trim(); if (!clean || clean === old) return; if (categories.some(x => x !== old && x.toLocaleLowerCase('de') === clean.toLocaleLowerCase('de'))) { alert('Diese Kategorie gibt es bereits.'); return } categories = categories.map(x => x === old ? clean : x); selectedStockCategories = selectedStockCategories.map(x => x === old ? clean : x); quickFilters = quickFilters.map(f => ({ ...f, categories: f.categories.map(x => x === old ? clean : x) })); saveStockFilters(); if (categoryRules[old]) { categoryRules[clean] = categoryRules[old]; delete categoryRules[old]; saveCategoryRules() } items = items.map(x => x.category === old ? { ...x, category: clean, updated_at: new Date().toISOString() } : x); saveCategories(); saveLocal(); render(); queueSync(); return }
       const l = e.target.closest('[data-location-delete]'); if (l) { locations[activeHousehold] = locationsFor().filter(x => x !== l.dataset.locationDelete); saveSettings(); render(); queueSync() } const u = e.target.closest('[data-unit-delete]'); if (u) { if (['Stück', 'Packung', 'g', 'kg', 'ml', 'Liter', 'Dose', 'Flasche'].includes(u.dataset.unitDelete)) { alert('Die eingebauten Standardeinheiten können nicht gelöscht werden.'); return } units = units.filter(x => x !== u.dataset.unitDelete); delete unitSteps[u.dataset.unitDelete]; saveSettings(); render(); queueSync() }
     });
+    $('stockForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const name = $('foodName').value.trim();
+      if (!name) { $('foodName').focus(); return; }
+      const code = $('barcodeCode').value.trim();
+      upsertLocal({
+        id: uid(), household_id: activeHousehold, kind: 'stock', name,
+        category: $('category').value || 'Allgemein',
+        qty: $('qty').value.trim() || '1', unit: $('unit').value,
+        location: $('location').value,
+        purchased_at: $('purchasedAt').value || null, expiry: $('expiry').value || null,
+        notes: $('stockNotes').value.trim(),
+        productImage: code ? localStorage.getItem('kueche-v1-product-image-' + code) || null : null,
+        checked: false, updated_at: new Date().toISOString()
+      });
+      e.target.reset();
+      $('qty').value = '1';
+      $('foodName').focus();
+    });
+    $('locationManager').addEventListener('submit', e => {
+      e.preventDefault();
+      const name = $('newLocation').value.trim();
+      if (!name) return;
+      const current = locationsFor();
+      if (current.some(v => v.toLocaleLowerCase('de') === name.toLocaleLowerCase('de'))) {
+        alert('Diesen Lagerort gibt es bereits.');
+        return;
+      }
+      locations[activeHousehold] = [...current, name];
+      saveSettings();
+      $('newLocation').value = '';
+      render();
+      queueSync();
+    });
     $('unitManager').addEventListener('submit', e => { e.preventDefault(); const name = $('newUnit').value.trim(); if (!name) return; if (units.some(u => u.toLocaleLowerCase('de') === name.toLocaleLowerCase('de'))) { alert('Diese Mengeneinheit gibt es bereits.'); return } units.push(name); if (!(Number(unitSteps[name]) > 0)) unitSteps[name] = 1; saveSettings(); $('newUnit').value = ''; render(); queueSync() });
     $('categoryForm').addEventListener('submit', e => { e.preventDefault(); const name = $('newCategory').value.trim(); if (!name) return; if (categories.some(c => c.toLocaleLowerCase('de') === name.toLocaleLowerCase('de'))) { alert('Diese Kategorie gibt es schon.'); return } categories.push(name); saveCategories(); $('newCategory').value = ''; renderCategories(); $('category').value = name; selectedStockCategories = [name]; saveStockFilters(); render(); queueSync() });
     $('categoryFilterChoices').addEventListener('change', e => { const cb = e.target.closest('[data-stock-category]'); if (!cb) return; const c = cb.dataset.stockCategory; selectedStockCategories = cb.checked ? [...new Set([...selectedStockCategories, c])] : selectedStockCategories.filter(x => x !== c); saveStockFilters(); $('stockSort').value = 'default'; render() });
@@ -2125,6 +2159,26 @@
     document.addEventListener('change', e => { let c = e.target.closest('[data-check]'); if (c) { let x = items.find(x => x.id === c.dataset.check); if (x) { x.checked = c.checked; x.updated_at = new Date().toISOString(); saveLocal(); render(); queueSync() } } });
     $('clearChecked').addEventListener('click', async () => { const removed = items.filter(x => x.household_id === activeHousehold && x.kind === 'shop' && x.checked); items = items.filter(x => !(x.household_id === activeHousehold && x.kind === 'shop' && x.checked)); saveLocal(); render(); if (client && currentUser && removed.length) { try { const rows = removed.map(x => ({ id: x.id, owner_id: currentUser.id, household_id: x.household_id || 'haushalt-1', kind: x.kind, name: x.name, qty: x.qty || null, unit: x.unit || null, location: x.location || null, category: x.category || 'Allgemein', expiry: x.expiry || null, purchased_at: x.purchased_at || null, notes: x.notes || '', checked: !!x.checked, updated_at: new Date().toISOString(), deleted: true })); const { error } = await client.from('kitchen_items').upsert(rows, { onConflict: 'id' }); if (error) throw error } catch (e) { $('authStatus').textContent = 'Entfernen konnte noch nicht synchronisiert werden: ' + e.message } } });
 
+    $('householdForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const name = $('newHousehold').value.trim();
+      if (!name) return;
+      if (households.length >= 5) {
+        alert('Du kannst maximal 5 Haushalte anlegen.');
+        return;
+      }
+      if (households.some(h => h.name.toLocaleLowerCase('de') === name.toLocaleLowerCase('de'))) {
+        alert('Diesen Haushaltsnamen gibt es bereits.');
+        return;
+      }
+      const id = uid();
+      households.push({ id, name });
+      activeHousehold = id;
+      saveHouseholds();
+      $('newHousehold').value = '';
+      render();
+      queueSync();
+    });
     $('renameHousehold').addEventListener('click', () => { const h = households.find(h => h.id === activeHousehold); if (!h) return; const name = prompt('Neuer Haushaltsname:', h.name); if (name === null) return; const clean = name.trim(); if (!clean) return; if (households.some(x => x.id !== h.id && x.name.toLocaleLowerCase('de') === clean.toLocaleLowerCase('de'))) { alert('Diesen Haushaltsnamen gibt es bereits.'); return } h.name = clean; saveHouseholds(); render(); queueSync() });
     $('deleteHousehold').addEventListener('click', async () => { if (households.length <= 1) { alert('Der letzte Haushalt kann nicht gelöscht werden.'); return } const h = households.find(h => h.id === activeHousehold); if (!h || !confirm(`Haushalt „${h.name}“ löschen? Die zugehörigen Vorräte und Einkaufslisteneinträge werden ebenfalls entfernt.`)) return; const gone = items.filter(x => x.household_id === h.id); items = items.filter(x => x.household_id !== h.id); households = households.filter(x => x.id !== h.id); activeHousehold = households[0].id; saveLocal(); saveHouseholds(); render(); await Promise.all(gone.map(x => deleteCloudRow(x))); if (client && currentUser) { const { error } = await client.from('kitchen_households').delete().eq('owner_id', currentUser.id).eq('id', h.id); if (error) { $('authStatus').textContent = 'Haushalt lokal gelöscht, Cloud-Löschen fehlgeschlagen: ' + error.message; return } } queueSync() });
     async function deleteCloudRow(item) { if (!client || !currentUser) return; try { const row = { id: item.id, owner_id: currentUser.id, household_id: item.household_id, kind: item.kind, name: item.name, qty: item.qty || null, unit: item.unit || null, location: item.location || null, category: item.category || 'Allgemein', expiry: item.expiry || null, purchased_at: item.purchased_at || null, notes: item.notes || '', checked: !!item.checked, updated_at: new Date().toISOString(), deleted: true }; await client.from('kitchen_items').upsert(row, { onConflict: 'id' }) } catch (e) { console.warn(e) } }
