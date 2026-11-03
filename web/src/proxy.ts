@@ -35,13 +35,14 @@ export async function proxy(request: NextRequest) {
 
   const { pathname, search } = request.nextUrl;
   const isAuthPage = pathname === "/login" || pathname === "/register";
+  const isPasswordReset = pathname === "/forgot-password";
   const isPublic =
     pathname.startsWith("/auth") ||
     pathname.startsWith("/invite") ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/robots.txt";
 
-  if (!user && !isAuthPage && !isPublic) {
+  if (!user && !isAuthPage && !isPasswordReset && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";

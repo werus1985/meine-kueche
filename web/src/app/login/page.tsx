@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 
 import { AuthShell } from "@/components/auth-shell";
@@ -27,7 +28,15 @@ export default async function LoginPage({
       description="Melde dich an, um Vorräte und Einkaufsliste zu sehen."
       footer={
         <>
-          Noch kein Konto? Die Registrierung ist nur per Einladung möglich.
+          <Link
+            href="/forgot-password"
+            className="font-medium text-emerald-700 hover:underline"
+          >
+            Passwort vergessen?
+          </Link>
+          <span className="mt-2 block">
+            Noch kein Konto? Die Registrierung ist nur per Einladung möglich.
+          </span>
         </>
       }
     >

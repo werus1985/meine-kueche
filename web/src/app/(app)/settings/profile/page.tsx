@@ -2,14 +2,20 @@ import { LogOut, Mail, ShieldCheck } from "lucide-react";
 
 import { signOutAction } from "@/actions/auth";
 import { AiKeyForm } from "@/components/ai-key-form";
+import { EmailChangeForm } from "@/components/email-change-form";
 import { ProfileForm } from "@/components/profile-form";
-import { Badge, buttonSecondary, Card, CardHeader, PageHeader } from "@/components/ui";
+import { Alert, Badge, buttonSecondary, Card, CardHeader, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { getProfile, requireHousehold } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { roleLabel } from "@/lib/utils";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ emailChanged?: string }>;
+}) {
+  const params = await searchParams;
   const user = await requireUser();
   const { active } = await requireHousehold();
   const profile = await getProfile(user.id);
@@ -30,6 +36,14 @@ export default async function ProfilePage() {
   return (
     <div>
       <PageHeader eyebrow="Einstellungen" title="Profil" />
+      {params.emailChanged ? (
+        <div className="mb-3">
+          <Alert tone="success">
+            E-Mail-Adresse geändert. Bitte prüfe beide Postfächer, falls eine
+            Bestätigung der alten Adresse nötig ist.
+          </Alert>
+        </div>
+      ) : null}
       <div className="grid gap-3 lg:grid-cols-2">
         <ProfileForm
           displayName={profile?.display_name ?? ""}
@@ -39,6 +53,7 @@ export default async function ProfilePage() {
           hasPersonalKey={Boolean(personalKey.data?.user_id)}
           hasHouseholdKey={Boolean(householdKey.data?.gemini_api_key)}
         />
+        <EmailChangeForm currentEmail={user.email ?? ""} />
         <Card>
           <CardHeader title="Konto" />
           <div className="space-y-3 px-5 py-4 text-sm text-stone-700">

@@ -289,6 +289,7 @@ Nach dem Push:
 | `/settings/…` (alt) | Alte Unterseiten leiten auf die passende Stammdaten-Sektion weiter |
 | `/invite/[token]` | Einladung annehmen |
 | `/login`, `/register`, `/onboarding` | Anmeldung, Einladungs-Registrierung und erste Einrichtung |
+| `/forgot-password`, `/reset-password` | Passwort zurücksetzen |
 
 ## Technik
 
@@ -339,6 +340,14 @@ Nach dem Push:
   (`get_invite_signup`, absichtlich für `anon` freigegeben). Tabellen bleiben
   für `anon` gesperrt; die beiden weiteren erreichbaren Funktionen prüfen
   `has_household_permission`.
+- **Auth-Mails:** Passwort-Reset (`/forgot-password` → Link →
+  `/reset-password`) und E-Mail-Änderung (*Einstellungen → Profil*) laufen über
+  Supabase. Dafür im Dashboard **Site URL** und **Redirect URLs**
+  (`https://<domain>/auth/callback**`) hinterlegen und SMTP (z. B. Resend)
+  einrichten. Lokal landen die Mails in Mailpit (`http://127.0.0.1:54324`).
+- **E-Mail-Wechsel:** Bestätigung an die neue Adresse, mit „Secure email
+  change" zusätzlich an die alte. Erst nach der Bestätigung wird die Adresse
+  geändert; offene Einladungen gelten weiterhin für die alte Adresse.
 - **Produktion:** `NEXT_PUBLIC_SITE_URL` auf die echte Domain setzen; sie
   wird für Bestätigungs-/Reset-Links verwendet.
 
@@ -371,8 +380,7 @@ openssl req -x509 -newkey rsa:2048 -nodes \
 
 ## Noch nicht enthalten
 
-- E-Mail-Versand für Einladungen (Resend o. ä.)
-- Passwort-zurücksetzen-UI
+- Automatischer E-Mail-Versand für Einladungen (Resend o. ä.)
 - Offline-Sync und Push-Benachrichtigungen
 - Feingranulare persönliche Filter-/Einheiten-Einstellungen
 - KI-Bilder oder Produktdatenbank-Anbindung (Open Food Facts)

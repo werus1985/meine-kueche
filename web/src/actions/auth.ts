@@ -129,3 +129,114 @@ export async function signOutAction(): Promise<void> {
   revalidatePath("/", "layout");
   redirect("/login");
 }
+
+/** Passwort-Reset anfordern – bewusst ohne Auskunft, ob die Adresse existiert. */
+export async function requestPasswordResetAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) {
+    return { ok: false, message: "Bitte eine E-Mail-Adresse eingeben." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
+  });
+
+  if (error && /rate limit|too many|security purposes/i.test(error.message)) {
+    return {
+      ok: false,
+      message: "Zu viele Anfragen. Bitte versuche es in ein paar Minuten erneut.",
+    };
+  }
+
+  return {
+    ok: true,
+    message:
+      "Wenn es ein Konto mit dieser Adresse gibt, ist eine E-Mail mit dem Link unterwegs.",
+  };
+}
+
+/** Neues Passwort setzen (über den Link aus der Reset-E-Mail). */
+export async function updatePasswordAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const password = String(formData.get("password") ?? "");
+  const passwordRepeat = String(formData.get("passwordRepeat") ?? "");
+
+  if (password.length < 8) {
+    return {
+      ok: false,
+      message: "Das Passwort muss mindestens 8 Zeichen lang sein.",
+    };
+  }
+  if (password !== passwordRepeat) {
+    return { ok: false, message: "Die Passwörter stimmen nicht überein." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      ok: false,
+      message:
+        "Der Link ist abgelaufen. Bitte fordere eine neue E-Mail zum Zurücksetzen an.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { ok: false, message: translateAuthError(error.message) };
+  }
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    message: "Passwort geändert. Du kannst dich jetzt mit dem neuen Passwort anmelden.",
+  };
+}
+
+/** E-Mail-Adresse ändern – wirksam erst nach Bestätigung per E-Mail. */
+export async function changeEmailAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return { ok: false, message: "Bitte eine gültige E-Mail-Adresse eingeben." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, message: "Bitte melde dich erneut an." };
+  }
+  if (user.email?.toLowerCase() === email.toLowerCase()) {
+    return { ok: false, message: "Das ist bereits deine E-Mail-Adresse." };
+  }
+
+  const { error } = await supabase.auth.updateUser(
+    { email },
+    {
+      emailRedirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(
+        "/settings/profile?emailChanged=1",
+      )}`,
+    },
+  );
+
+  if (error) {
+    return { ok: false, message: translateAuthError(error.message) };
+  }
+
+  return {
+    ok: true,
+    message: `Bestätigungslink an ${email} gesendet. Die Änderung wird erst nach dem Klick aktiv (ggf. kommt zusätzlich eine Mail an die alte Adresse).`,
+  };
+}
