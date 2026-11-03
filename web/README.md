@@ -34,6 +34,7 @@ Mehrbenutzer-Schema.
    NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
    NEXT_PUBLIC_SITE_URL=http://localhost:3000
    AI_KEYS_SECRET=<openssl rand -base64 32>
+   SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
    ```
 
    `AI_KEYS_SECRET` (32 Byte, Base64) verschlüsselt die gespeicherten
@@ -41,6 +42,10 @@ Mehrbenutzer-Schema.
    und **muss** über die gesamte Laufzeit gleich bleiben – geht er verloren,
    sind die gespeicherten Keys nicht mehr lesbar und müssen neu eingetragen
    werden.
+
+   `SUPABASE_SERVICE_ROLE_KEY` wird **nur** für die Kontolöschung benötigt
+   (Auth-User entfernen) und bleibt ebenfalls server-only. Fehlt er, zeigt die
+   Löschfunktion einen Hinweis; alles andere läuft ohne ihn.
 
    Für die KI gibt es **keinen serverweiten Key** mehr: Jeder Nutzer
    hinterlegt seinen eigenen Gemini-API-Key unter *Einstellungen → Profil*,
@@ -348,6 +353,11 @@ Nach dem Push:
 - **E-Mail-Wechsel:** Bestätigung an die neue Adresse, mit „Secure email
   change" zusätzlich an die alte. Erst nach der Bestätigung wird die Adresse
   geändert; offene Einladungen gelten weiterhin für die alte Adresse.
+- **Datenexport:** `/api/export` liefert Profil, Mitglieder und alle Daten des
+  aktiven Haushalts als JSON-Download – ohne KI-Keys.
+- **Kontolöschung:** im Profil mit Bestätigungswort; löscht eigene Haushalte
+  inklusive Fotos und den Auth-User (Service-Role-Key, nur serverseitig).
+  Alleineigentum mit weiteren Mitgliedern blockiert die Löschung.
 - **Produktion:** `NEXT_PUBLIC_SITE_URL` auf die echte Domain setzen; sie
   wird für Bestätigungs-/Reset-Links verwendet.
 

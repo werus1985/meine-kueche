@@ -1,6 +1,7 @@
 import { LogOut, Mail, ShieldCheck } from "lucide-react";
 
 import { signOutAction } from "@/actions/auth";
+import { AccountDataCard } from "@/components/account-data-card";
 import { AiKeyForm } from "@/components/ai-key-form";
 import { EmailChangeForm } from "@/components/email-change-form";
 import { ProfileForm } from "@/components/profile-form";
@@ -54,6 +55,7 @@ export default async function ProfilePage({
           hasHouseholdKey={Boolean(householdKey.data?.gemini_api_key)}
         />
         <EmailChangeForm currentEmail={user.email ?? ""} />
+        <AccountDataCard />
         <Card>
           <CardHeader title="Konto" />
           <div className="space-y-3 px-5 py-4 text-sm text-stone-700">

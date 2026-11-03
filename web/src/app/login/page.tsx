@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; deleted?: string }>;
 }) {
   const params = await searchParams;
   const next = safeNextPath(params.next);
@@ -40,6 +40,13 @@ export default async function LoginPage({
         </>
       }
     >
+      {params.deleted ? (
+        <div className="mb-4">
+          <Alert tone="success">
+            Dein Konto und deine Daten wurden gelöscht.
+          </Alert>
+        </div>
+      ) : null}
       {errorMessage ? (
         <div className="mb-4">
           <Alert tone="error">{errorMessage}</Alert>
