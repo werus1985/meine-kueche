@@ -31,10 +31,10 @@ Mehrbenutzer-Schema.
 
    ```env
    NEXT_PUBLIC_SUPABASE_URL=https://<projekt>.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable-key sb_publishable_…>
    NEXT_PUBLIC_SITE_URL=http://localhost:3000
    AI_KEYS_SECRET=<openssl rand -base64 32>
-   SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+   SUPABASE_SERVICE_ROLE_KEY=<secret-key sb_secret_…>
    ```
 
    `AI_KEYS_SECRET` (32 Byte, Base64) verschlüsselt die gespeicherten

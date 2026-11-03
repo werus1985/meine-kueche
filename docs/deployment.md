@@ -16,10 +16,13 @@ Domain (~12 €/Jahr) + optional Backblaze B2 für Backups (Free-Tier).
 ## 2. Supabase-Projekt anlegen
 
 1. Neues Projekt, **Region: EU** (z. B. Frankfurt), starkes DB-Passwort.
-2. Unter *Project Settings → API* notieren:
+2. Unter *Project Settings → API Keys* notieren:
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
-   - `anon public` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `service_role` → `SUPABASE_SERVICE_ROLE_KEY` (nur server-seitig!)
+   - **Publishable key** (`sb_publishable_…`) → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - **Secret key** (`sb_secret_…`, vollständig über das Auge-Symbol) →
+     `SUPABASE_SERVICE_ROLE_KEY` (nur server-seitig!)
+   - Die Legacy-Keys (`anon`/`service_role`) funktionieren weiterhin, werden
+     aber **Anfang 2027 abgeschaltet** – deshalb die neuen Keys verwenden.
 3. Unter *Project Settings → Database* die Verbindungsdaten (Session Pooler)
    für Migrationen und Backups bereithalten.
 
@@ -76,10 +79,10 @@ Funktionen und die Einladungs-/Registrierungsfunktionen an.
    | Name | Wert |
    | --- | --- |
    | `NEXT_PUBLIC_SUPABASE_URL` | `https://<projekt>.supabase.co` |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable key (`sb_publishable_…`) |
    | `NEXT_PUBLIC_SITE_URL` | `https://<domain>` |
    | `AI_KEYS_SECRET` | `openssl rand -base64 32` |
-   | `SUPABASE_SERVICE_ROLE_KEY` | service_role key (nur server) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Secret key (`sb_secret_…`, nur server) |
 
 5. **Region:** `fra1` (Frankfurt) – passt zur Supabase-EU-Region.
 6. Deploy starten.
