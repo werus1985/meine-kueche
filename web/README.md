@@ -239,6 +239,11 @@ Nach dem Push:
 - **Einladungen:** per E-Mail-Adresse, als kopierbarer Link (14 Tage
   gültig). Der Link funktioniert nur mit der eingeladenen Adresse.
   E-Mail-Versand über Resend ist bewusst noch nicht eingebaut.
+- **Registrierung nur per Einladung:** Ohne gültigen Einladungslink zeigt
+  `/register` nur einen Hinweis. Mit Link wird die eingeladene Adresse
+  vorausgefüllt (nicht änderbar) und serverseitig geprüft; nach dem Anlegen
+  führt der Weg direkt zur Einladung. Öffentliche Registrierung ist damit
+  gesperrt (Supabase-Signup bleibt technisch aktiv, siehe Hosting-Hinweis).
 - **Leserechte:** `viewer` sehen alles, können aber nichts ändern –
   zusätzlich zur RLS auch in der UI gesperrt.
 
@@ -283,7 +288,7 @@ Nach dem Push:
 | `/settings/profile` | Profil, Rolle, Abmelden |
 | `/settings/…` (alt) | Alte Unterseiten leiten auf die passende Stammdaten-Sektion weiter |
 | `/invite/[token]` | Einladung annehmen |
-| `/login`, `/register`, `/onboarding` | Anmeldung und erste Einrichtung |
+| `/login`, `/register`, `/onboarding` | Anmeldung, Einladungs-Registrierung und erste Einrichtung |
 
 ## Technik
 
@@ -330,6 +335,10 @@ Nach dem Push:
   in der Datenbank. Altbestand im Klartext wird beim nächsten Speichern
   automatisch verschlüsselt.
 - **Suchmaschinen:** `public/robots.txt` sperrt alles (`Disallow: /`).
+- **Registrierung:** nur per Einladung – die Prüfung passiert serverseitig
+  (`get_invite_signup`, absichtlich für `anon` freigegeben). Tabellen bleiben
+  für `anon` gesperrt; die beiden weiteren erreichbaren Funktionen prüfen
+  `has_household_permission`.
 - **Produktion:** `NEXT_PUBLIC_SITE_URL` auf die echte Domain setzen; sie
   wird für Bestätigungs-/Reset-Links verwendet.
 

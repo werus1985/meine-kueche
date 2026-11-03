@@ -37,6 +37,7 @@ export async function proxy(request: NextRequest) {
   const isAuthPage = pathname === "/login" || pathname === "/register";
   const isPublic =
     pathname.startsWith("/auth") ||
+    pathname.startsWith("/invite") ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/robots.txt";
 

@@ -494,6 +494,11 @@ isOneToOne: false
               "display_name": string,"email": string,"joined_at": string,"role": string,"user_id": string
             }[]
                            },
+"get_invite_signup":
+{ Args: { "p_token": string }; Returns: {
+              "accepted_at": string,"email": string,"expires_at": string,"household_name": string
+            }[]
+                           },
 "has_household_permission":
 { Args: { "p_household_id": string,"p_permission": string }; Returns: boolean
                            },

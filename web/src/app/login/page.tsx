@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 
 import { AuthShell } from "@/components/auth-shell";
@@ -28,13 +27,7 @@ export default async function LoginPage({
       description="Melde dich an, um Vorräte und Einkaufsliste zu sehen."
       footer={
         <>
-          Noch kein Konto?{" "}
-          <Link
-            href={`/register?next=${encodeURIComponent(next)}`}
-            className="font-medium text-emerald-700 hover:underline"
-          >
-            Jetzt registrieren
-          </Link>
+          Noch kein Konto? Die Registrierung ist nur per Einladung möglich.
         </>
       }
     >

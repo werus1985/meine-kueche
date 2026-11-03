@@ -58,7 +58,7 @@ export async function signUpAction(
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const passwordRepeat = String(formData.get("passwordRepeat") ?? "");
-  const next = safeNextPath(String(formData.get("next") ?? "/"));
+  const inviteToken = String(formData.get("invite") ?? "").trim();
 
   if (!email || !password) {
     return { ok: false, message: "Bitte E-Mail-Adresse und Passwort eingeben." };
@@ -73,10 +73,32 @@ export async function signUpAction(
     return { ok: false, message: "Die Passwörter stimmen nicht überein." };
   }
 
+  const supabase = await createClient();
+
+  // Registrierung nur mit gültiger, offener Einladung für genau diese Adresse.
+  const { data: inviteData } = inviteToken
+    ? await supabase.rpc("get_invite_signup", { p_token: inviteToken })
+    : { data: null };
+  const invite = ((inviteData ?? []) as { email: string }[])[0] ?? null;
+  if (!invite) {
+    return {
+      ok: false,
+      message:
+        "Die Registrierung ist nur per Einladung möglich. Bitte öffne den Link aus deiner Einladungs-E-Mail.",
+    };
+  }
+  if (invite.email.toLowerCase() !== email.toLowerCase()) {
+    return {
+      ok: false,
+      message: "Diese Einladung gilt für eine andere E-Mail-Adresse.",
+    };
+  }
+
   // Feste Site-URL statt Request-Origin: der Origin-Header ist fälschbar.
   const origin = SITE_URL;
+  // Nach der Bestätigung direkt zur Einladung – dort wird sie angenommen.
+  const next = `/invite/${encodeURIComponent(inviteToken)}`;
 
-  const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
