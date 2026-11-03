@@ -31,6 +31,18 @@ Stand: nach dem ersten produktiven Deployment (Vercel + Supabase).
 
 ## Demnächst
 
+- [ ] **Registrierung mit Einladung: direkt dem Haushalt beitreten**
+      Heute führt der Weg nach der Registrierung über die Einladungsseite
+      („Einladung annehmen“); wer sie nicht öffnet, landet im Onboarding und
+      muss zuerst einen **eigenen** Haushalt anlegen.
+      Ziel: Nach Registrierung/Bestätigung wird die Einladung automatisch
+      angenommen – der Haushalt der einladenden Person ist sofort aktiv, das
+      Onboarding entfällt.
+      Umsetzung: `accept_household_invite(token)` serverseitig in
+      `signUpAction` bzw. im `/auth/callback` aufrufen, `next` auf `/items`
+      setzen; im Onboarding offene Einladungen anbieten (falls der Link
+      verloren geht).
+
 - [ ] **SMTP über Resend einrichten**
       1. Resend-Account, Domain verifizieren (SPF/DKIM/DNS)
       2. Supabase → *Authentication → SMTP*: Host `smtp.resend.com`,
