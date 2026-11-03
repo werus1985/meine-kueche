@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getActiveHousehold } from "@/lib/data";
+import { decryptSecret } from "@/lib/secret";
 import { createClient } from "@/lib/supabase/server";
 
 export type GeminiKeySource = "user" | "household";
@@ -33,7 +34,9 @@ export async function resolveGeminiKey(): Promise<ResolvedGeminiKey | null> {
     .eq("user_id", user.id)
     .maybeSingle();
   if (personal?.gemini_api_key) {
-    return { key: personal.gemini_api_key, source: "user" };
+    const key = decryptSecret(personal.gemini_api_key);
+    if (key) return { key, source: "user" };
+    console.error("Persönlicher KI-Key ist nicht entschlüsselbar.");
   }
 
   const { data: household } = await supabase
@@ -42,7 +45,9 @@ export async function resolveGeminiKey(): Promise<ResolvedGeminiKey | null> {
     .eq("id", context.active.id)
     .maybeSingle();
   if (household?.gemini_api_key) {
-    return { key: household.gemini_api_key, source: "household" };
+    const key = decryptSecret(household.gemini_api_key);
+    if (key) return { key, source: "household" };
+    console.error("Haushalts-KI-Key ist nicht entschlüsselbar.");
   }
 
   return null;

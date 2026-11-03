@@ -33,13 +33,20 @@ Mehrbenutzer-Schema.
    NEXT_PUBLIC_SUPABASE_URL=https://<projekt>.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
    NEXT_PUBLIC_SITE_URL=http://localhost:3000
+   AI_KEYS_SECRET=<openssl rand -base64 32>
    ```
+
+   `AI_KEYS_SECRET` (32 Byte, Base64) verschlüsselt die gespeicherten
+   Gemini-Keys mit AES-256-GCM. Der Wert bleibt ausschließlich auf dem Server
+   und **muss** über die gesamte Laufzeit gleich bleiben – geht er verloren,
+   sind die gespeicherten Keys nicht mehr lesbar und müssen neu eingetragen
+   werden.
 
    Für die KI gibt es **keinen serverweiten Key** mehr: Jeder Nutzer
    hinterlegt seinen eigenen Gemini-API-Key unter *Einstellungen → Profil*,
    optional gibt es einen gemeinsamen Haushalts-Key unter
-   *Einstellungen → Haushalt*. Der Key wird serverseitig verwendet und nie
-   an den Browser ausgeliefert.
+   *Einstellungen → Haushalt*. Der Key wird verschlüsselt gespeichert,
+   serverseitig verwendet und nie an den Browser ausgeliefert.
 
 3. Datenbank aufbauen (siehe unten).
 
@@ -318,6 +325,10 @@ Nach dem Push:
   Serverseitig gilt dasselbe Limit (`MAX_PHOTO_BYTES`).
 - **KI:** Gemini hat 15 s pro Versuch und 25 s Gesamtbudget; der App-Bereich
   setzt `maxDuration = 60` (Vercel-Hobby-Maximum).
+- **KI-Keys verschlüsselt:** `user_ai_settings.gemini_api_key` und
+  `households.gemini_api_key` liegen als AES-256-GCM-Chiffrat (`v1.<iv>.<tag>.<cipher>`)
+  in der Datenbank. Altbestand im Klartext wird beim nächsten Speichern
+  automatisch verschlüsselt.
 - **Suchmaschinen:** `public/robots.txt` sperrt alles (`Disallow: /`).
 - **Produktion:** `NEXT_PUBLIC_SITE_URL` auf die echte Domain setzen; sie
   wird für Bestätigungs-/Reset-Links verwendet.

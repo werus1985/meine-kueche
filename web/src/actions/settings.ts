@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { getActiveHousehold } from "@/lib/data";
 import { removePhoto } from "@/lib/photos";
+import { encryptSecret } from "@/lib/secret";
 import { createClient } from "@/lib/supabase/server";
 import type { FormState } from "@/lib/types";
 import { normalizeBarcode } from "@/lib/utils";
@@ -663,6 +664,9 @@ function normalizeGeminiKey(value: FormDataEntryValue | null) {
 const GEMINI_KEY_HINT =
   "Der Gemini-API-Key sieht ungültig aus (10–200 Zeichen, keine Leerzeichen).";
 
+const ENCRYPTION_MISSING_MESSAGE =
+  "Der Server kann keine Keys verschlüsseln (AI_KEYS_SECRET fehlt oder ist ungültig). Bitte die Administration informieren.";
+
 export async function saveUserGeminiKeyAction(
   _prev: FormState,
   formData: FormData,
@@ -678,10 +682,15 @@ export async function saveUserGeminiKeyAction(
     return { ok: false, message: GEMINI_KEY_HINT };
   }
 
+  const encrypted = encryptSecret(key);
+  if (!encrypted) {
+    return { ok: false, message: ENCRYPTION_MISSING_MESSAGE };
+  }
+
   const { error } = await supabase.from("user_ai_settings").upsert(
     {
       user_id: user.id,
-      gemini_api_key: key,
+      gemini_api_key: encrypted,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },
@@ -721,10 +730,15 @@ export async function saveHouseholdGeminiKeyAction(
     return { ok: false, message: GEMINI_KEY_HINT };
   }
 
+  const encrypted = encryptSecret(key);
+  if (!encrypted) {
+    return { ok: false, message: ENCRYPTION_MISSING_MESSAGE };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("households")
-    .update({ gemini_api_key: key })
+    .update({ gemini_api_key: encrypted })
     .eq("id", context.active.id);
   if (error) return { ok: false, message: error.message };
 
