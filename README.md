@@ -2,6 +2,11 @@
 
 Ein kleiner, deutschsprachiger Handy-Web-App-Prototyp mit Vorräten, Mindesthaltbarkeit, Warnhinweisen und Einkaufsliste.
 
+> **Neu:** Unter [`web/`](web/) entsteht die mehrbenutzerfähige Next.js-App mit
+> Haushalten, Rollen und Einladungen. Die bestehende PWA in `index.html` bleibt
+> vorerst erhalten. Datenbank-Setup und Hintergründe:
+> [`docs/datenbank-multiuser.md`](docs/datenbank-multiuser.md).
+
 ## Sofort testen
 Öffne `index.html` in einem modernen Browser. Die Vorräte und Einkaufsliste werden lokal im Browser gespeichert. Ohne Cloud-Konfiguration werden sie **nicht** zwischen Geräten synchronisiert.
 

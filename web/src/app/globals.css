@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafaf9;
+  --foreground: #1c1917;
+  --accent: #047857;
+  /* Akzentfarben: im Vorrat grün (Standard), im Einkauf blau (siehe .accent-shop). */
+  --accent-50: #ecfdf5;
+  --accent-100: #d1fae5;
+  --accent-200: #a7f3d0;
+  --accent-300: #6ee7b7;
+  --accent-500: #10b981;
+  --accent-600: #059669;
+  --accent-700: #047857;
+  --accent-800: #065f46;
+  --accent-900: #064e3b;
+  --accent-950: #022c22;
+  --accent-ring: rgb(16 185 129 / 0.4);
+  --accent-ring-soft: rgb(16 185 129 / 0.2);
+  --accent-shadow: rgb(6 78 59 / 0.25);
+}
+
+/* Einkauf-Modus: dieselben Designelemente, aber in einem gedämpften Blau. */
+.accent-shop {
+  --accent-50: #f3f8fc;
+  --accent-100: #e4eef7;
+  --accent-200: #c7dcec;
+  --accent-300: #a0c0da;
+  --accent-500: #5687b0;
+  --accent-600: #44759f;
+  --accent-700: #35648f;
+  --accent-800: #2c5479;
+  --accent-900: #254762;
+  --accent-950: #1a3145;
+  --accent-ring: rgb(53 100 143 / 0.4);
+  --accent-ring-soft: rgb(53 100 143 / 0.2);
+  --accent-shadow: rgb(26 49 69 / 0.25);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: light;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: #a7f3d0;
+  color: #064e3b;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+input[type="date"] {
+  /* Safari rendert Datumsfelder als inline-flex und ignoriert dann width: 100%. */
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Safari gibt den inneren Datums-Teilen zusätzliches Padding, das die Höhe verfälscht. */
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  padding: 0;
+}
+
+/*
+ * iOS Safari: Das native Datumsfeld bringt eine eigene Innenbreite mit und
+ * ignoriert dadurch width: 100%. appearance: none löst diese Größenbindung;
+ * der native Kalender öffnet sich beim Antippen weiterhin.
+ */
+@supports (-webkit-touch-callout: none) {
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
