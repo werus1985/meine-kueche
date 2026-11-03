@@ -20,6 +20,8 @@ type SearchParams = {
   updated?: string;
   product?: string;
   moved?: string;
+  deleted?: string;
+  cleared?: string;
   error?: string;
 };
 
@@ -108,6 +110,23 @@ export default async function ItemsPage({
         params.moved === "0"
           ? "Es waren keine abgehakten Einträge vorhanden."
           : `${params.moved} ${params.moved === "1" ? "Eintrag wurde" : "Einträge wurden"} in den Vorrat verschoben.`,
+      tone: "success",
+    };
+  } else if (params.cleared) {
+    status = {
+      message:
+        params.cleared === "0"
+          ? "Die Einkaufsliste war bereits leer."
+          : `Einkaufsliste geleert (${params.cleared} ${params.cleared === "1" ? "Eintrag" : "Einträge"}).`,
+      tone: "success",
+    };
+  } else if (params.deleted) {
+    const noun = kind === "shop" ? "Eintrag" : "Artikel";
+    status = {
+      message:
+        params.deleted === "0"
+          ? "Es war nichts zu löschen."
+          : `${params.deleted} ${params.deleted === "1" ? `${noun} wurde` : `${kind === "shop" ? "Einträge" : "Artikel"} wurden`} gelöscht.`,
       tone: "success",
     };
   } else if (params.error) {

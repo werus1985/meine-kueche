@@ -79,6 +79,7 @@ create table public.households (
   id                      uuid primary key default gen_random_uuid(),
   name                    text not null check (length(btrim(name)) between 1 and 80),
   external_lookup_enabled boolean not null default true,
+  gemini_api_key          text,
   created_by              uuid default auth.uid() references auth.users(id) on delete set null,
   created_at              timestamptz not null default now(),
   updated_at              timestamptz not null default now()
@@ -95,6 +96,12 @@ create table public.household_members (
 
 create index household_members_user_idx
   on public.household_members (user_id);
+
+create table public.user_ai_settings (
+  user_id        uuid primary key references auth.users(id) on delete cascade,
+  gemini_api_key text not null check (length(btrim(gemini_api_key)) between 10 and 200),
+  updated_at     timestamptz not null default now()
+);
 
 create table public.household_invites (
   id           uuid primary key default gen_random_uuid(),
@@ -269,6 +276,56 @@ create table public.kitchen_quick_filter_categories (
   foreign key (household_id, category_id)
     references public.kitchen_categories (household_id, id) on delete cascade
 );
+
+-- Rezepte pro Haushalt
+create table public.kitchen_recipes (
+  id           uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households(id) on delete cascade,
+  title        text not null check (length(btrim(title)) between 1 and 200),
+  description  text not null default '',
+  servings     integer not null default 4 check (servings between 1 and 100),
+  source       text not null default 'manual'
+    check (source in ('manual', 'chat', 'link', 'photo')),
+  source_url   text,
+  photo_path   text,
+  created_by   uuid default auth.uid() references auth.users(id) on delete set null,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  deleted_at   timestamptz,
+  unique (household_id, id)
+);
+
+create index kitchen_recipes_household_idx
+  on public.kitchen_recipes (household_id) where deleted_at is null;
+
+create table public.kitchen_recipe_ingredients (
+  id           uuid primary key default gen_random_uuid(),
+  household_id uuid not null,
+  recipe_id    uuid not null,
+  name         text not null check (length(btrim(name)) between 1 and 200),
+  qty          numeric check (qty is null or qty > 0),
+  unit         text,
+  optional     boolean not null default false,
+  sort_order   integer not null default 0,
+  foreign key (household_id, recipe_id)
+    references public.kitchen_recipes (household_id, id) on delete cascade
+);
+
+create index kitchen_recipe_ingredients_recipe_idx
+  on public.kitchen_recipe_ingredients (recipe_id, sort_order);
+
+create table public.kitchen_recipe_steps (
+  id           uuid primary key default gen_random_uuid(),
+  household_id uuid not null,
+  recipe_id    uuid not null,
+  text         text not null default '',
+  sort_order   integer not null default 0,
+  foreign key (household_id, recipe_id)
+    references public.kitchen_recipes (household_id, id) on delete cascade
+);
+
+create index kitchen_recipe_steps_recipe_idx
+  on public.kitchen_recipe_steps (recipe_id, sort_order);
 
 -- Gelernte Zuordnungen externer Produkt-Tags (z. B. Open Food Facts) zu
 -- Kategorien/Einheiten des Haushalts. Lokales Wissen gewinnt immer; die
@@ -698,6 +755,10 @@ alter table public.kitchen_category_settings enable row level security;
 alter table public.kitchen_quick_filters            enable row level security;
 alter table public.kitchen_quick_filter_categories  enable row level security;
 alter table public.external_product_mappings         enable row level security;
+alter table public.user_ai_settings                  enable row level security;
+alter table public.kitchen_recipes                   enable row level security;
+alter table public.kitchen_recipe_ingredients        enable row level security;
+alter table public.kitchen_recipe_steps              enable row level security;
 
 -- Profile: eigenes Profil und Profile von Haushaltsmitgliedern lesen.
 create policy profiles_select on public.profiles
@@ -871,6 +932,62 @@ create policy external_product_mappings_update on public.external_product_mappin
   using (public.has_household_permission(household_id, 'write'))
   with check (public.has_household_permission(household_id, 'write'));
 create policy external_product_mappings_delete on public.external_product_mappings
+  for delete to authenticated
+  using (public.has_household_permission(household_id, 'write'));
+
+create policy user_ai_settings_select on public.user_ai_settings
+  for select to authenticated
+  using (user_id = (select auth.uid()));
+create policy user_ai_settings_insert on public.user_ai_settings
+  for insert to authenticated
+  with check (user_id = (select auth.uid()));
+create policy user_ai_settings_update on public.user_ai_settings
+  for update to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+create policy user_ai_settings_delete on public.user_ai_settings
+  for delete to authenticated
+  using (user_id = (select auth.uid()));
+
+create policy kitchen_recipes_select on public.kitchen_recipes
+  for select to authenticated
+  using (public.has_household_permission(household_id, 'read'));
+create policy kitchen_recipes_insert on public.kitchen_recipes
+  for insert to authenticated
+  with check (public.has_household_permission(household_id, 'write'));
+create policy kitchen_recipes_update on public.kitchen_recipes
+  for update to authenticated
+  using (public.has_household_permission(household_id, 'write'))
+  with check (public.has_household_permission(household_id, 'write'));
+create policy kitchen_recipes_delete on public.kitchen_recipes
+  for delete to authenticated
+  using (public.has_household_permission(household_id, 'write'));
+
+create policy kitchen_recipe_ingredients_select on public.kitchen_recipe_ingredients
+  for select to authenticated
+  using (public.has_household_permission(household_id, 'read'));
+create policy kitchen_recipe_ingredients_insert on public.kitchen_recipe_ingredients
+  for insert to authenticated
+  with check (public.has_household_permission(household_id, 'write'));
+create policy kitchen_recipe_ingredients_update on public.kitchen_recipe_ingredients
+  for update to authenticated
+  using (public.has_household_permission(household_id, 'write'))
+  with check (public.has_household_permission(household_id, 'write'));
+create policy kitchen_recipe_ingredients_delete on public.kitchen_recipe_ingredients
+  for delete to authenticated
+  using (public.has_household_permission(household_id, 'write'));
+
+create policy kitchen_recipe_steps_select on public.kitchen_recipe_steps
+  for select to authenticated
+  using (public.has_household_permission(household_id, 'read'));
+create policy kitchen_recipe_steps_insert on public.kitchen_recipe_steps
+  for insert to authenticated
+  with check (public.has_household_permission(household_id, 'write'));
+create policy kitchen_recipe_steps_update on public.kitchen_recipe_steps
+  for update to authenticated
+  using (public.has_household_permission(household_id, 'write'))
+  with check (public.has_household_permission(household_id, 'write'));
+create policy kitchen_recipe_steps_delete on public.kitchen_recipe_steps
   for delete to authenticated
   using (public.has_household_permission(household_id, 'write'));
 
@@ -1704,6 +1821,10 @@ grant select, insert, update, delete on public.kitchen_category_settings to auth
 grant select, insert, update, delete on public.kitchen_quick_filters to authenticated;
 grant select, insert, update, delete on public.kitchen_quick_filter_categories to authenticated;
 grant select, insert, update, delete on public.external_product_mappings to authenticated;
+grant select, insert, update, delete on public.user_ai_settings to authenticated;
+grant select, insert, update, delete on public.kitchen_recipes to authenticated;
+grant select, insert, update, delete on public.kitchen_recipe_ingredients to authenticated;
+grant select, insert, update, delete on public.kitchen_recipe_steps to authenticated;
 
 grant execute on function public.is_household_member(uuid) to authenticated;
 grant execute on function public.has_household_permission(uuid, text) to authenticated;

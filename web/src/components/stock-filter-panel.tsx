@@ -223,7 +223,14 @@ export function StockFilterPanel({
 
   function applyQuickFilter(filter: QuickFilterOption) {
     if (!filter.categoryIds.length) return;
+    // Erneutes Antippen des aktiven Filters hebt ihn wieder auf.
+    const active = quickFilterId === filter.id;
     apply((params) => {
+      if (active) {
+        params.delete("quickFilter");
+        params.delete("category");
+        return;
+      }
       params.set("category", filter.categoryIds.join(","));
       params.set("quickFilter", filter.id);
     });
@@ -243,10 +250,6 @@ export function StockFilterPanel({
     sort !== "expiry" ||
     expired ||
     expiring;
-  const selectedNames = categories
-    .filter((category) => selectedCategoryIds.includes(category.id))
-    .map((category) => category.name);
-  const defaultFilterName = selectedNames.join(" + ");
 
   return (
     <div ref={containerRef} className="relative">
@@ -478,9 +481,8 @@ export function StockFilterPanel({
 
           {canWrite && selectedCategoryIds.length > 0 ? (
             <SaveQuickFilter
-              key={defaultFilterName}
+              key={selectedCategoryIds.join(",")}
               categoryIds={selectedCategoryIds}
-              defaultName={defaultFilterName}
             />
           ) : null}
 

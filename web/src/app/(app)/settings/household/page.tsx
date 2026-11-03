@@ -1,3 +1,4 @@
+import { HouseholdAiKeyForm } from "@/components/household-ai-key-form";
 import { HouseholdForm } from "@/components/household-form";
 import { HouseholdManager } from "@/components/household-manager";
 import { MembersManager } from "@/components/members-manager";
@@ -35,7 +36,7 @@ export default async function HouseholdSettingsPage({
 
   const householdResult = await supabase
     .from("households")
-    .select("external_lookup_enabled")
+    .select("external_lookup_enabled, gemini_api_key")
     .eq("id", active.id)
     .maybeSingle();
 
@@ -93,6 +94,13 @@ export default async function HouseholdSettingsPage({
         <HouseholdForm
           name={active.name}
           externalLookupEnabled={householdResult.data?.external_lookup_enabled ?? true}
+          canManage={active.canManageHousehold}
+        />
+      </div>
+
+      <div className="mb-5">
+        <HouseholdAiKeyForm
+          hasKey={Boolean(householdResult.data?.gemini_api_key)}
           canManage={active.canManageHousehold}
         />
       </div>

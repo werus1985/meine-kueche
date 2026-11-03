@@ -49,15 +49,15 @@ export type GeminiCallResult =
 
 export async function callGemini(
   prompt: string,
-  generationConfig: Record<string, unknown> = {},
+  generationConfig: Record<string, unknown>,
+  apiKey: string,
 ): Promise<GeminiCallResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return {
       ok: false,
-      status: 500,
+      status: 400,
       message:
-        "Die KI ist noch nicht eingerichtet. Trage GEMINI_API_KEY in web/.env.local ein und starte den Server neu.",
+        "Für die KI fehlt ein Gemini-API-Key (Einstellungen → Profil bzw. Haushalt).",
     };
   }
 

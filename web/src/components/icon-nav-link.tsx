@@ -31,9 +31,9 @@ export function IconNavLink({
       title={targetLabel}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "inline-flex size-11 shrink-0 items-center justify-center rounded-xl transition focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2",
+        "inline-flex size-11 shrink-0 items-center justify-center rounded-xl transition focus:outline-none focus:ring-2 focus:ring-[var(--accent-500)] focus:ring-offset-2",
         active
-          ? "bg-emerald-700 text-white shadow-sm"
+          ? "bg-[var(--accent-700)] text-white shadow-sm"
           : "text-stone-600 hover:bg-stone-100 hover:text-stone-900",
       )}
     >

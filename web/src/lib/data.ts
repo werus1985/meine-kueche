@@ -9,6 +9,9 @@ import {
   permissionsForRole,
   type HouseholdSummary,
   type KitchenProduct,
+  type RecipeIngredient,
+  type RecipeStep,
+  type RecipeWithDetails,
   type RoleKey,
 } from "@/lib/types";
 
@@ -102,9 +105,8 @@ export async function getLocations(householdId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("kitchen_locations")
-    .select("id, name, sort_order")
+    .select("id, name")
     .eq("household_id", householdId)
-    .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
   if (error) {
@@ -255,11 +257,79 @@ export async function getProducts(householdId: string): Promise<KitchenProduct[]
  * `/api/photos/...` ausgeliefert (statt über signierte Storage-URLs), damit
  * sie auch bei HTTPS-App und HTTP-Supabase ohne Mixed-Content-Blockade laden.
  */
+export async function getRecipes(
+  householdId: string,
+): Promise<RecipeWithDetails[]> {
+  const supabase = await createClient();
+  const [recipesResult, ingredientsResult, stepsResult] = await Promise.all([
+    supabase
+      .from("kitchen_recipes")
+      .select(
+        "id, household_id, title, description, servings, source, source_url, photo_path, created_at, updated_at",
+      )
+      .eq("household_id", householdId)
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false })
+      .range(0, 499),
+    supabase
+      .from("kitchen_recipe_ingredients")
+      .select("recipe_id, name, qty, unit, optional, sort_order")
+      .eq("household_id", householdId)
+      .order("sort_order", { ascending: true })
+      .range(0, 4999),
+    supabase
+      .from("kitchen_recipe_steps")
+      .select("recipe_id, text, sort_order")
+      .eq("household_id", householdId)
+      .order("sort_order", { ascending: true })
+      .range(0, 4999),
+  ]);
+
+  if (recipesResult.error) {
+    console.error("getRecipes", recipesResult.error);
+    return [];
+  }
+
+  const ingredientsByRecipe = new Map<string, RecipeIngredient[]>();
+  for (const row of ingredientsResult.data ?? []) {
+    const list = ingredientsByRecipe.get(row.recipe_id) ?? [];
+    list.push({
+      name: row.name,
+      qty: row.qty === null ? null : Number(row.qty),
+      unit: row.unit,
+      optional: row.optional,
+    });
+    ingredientsByRecipe.set(row.recipe_id, list);
+  }
+
+  const stepsByRecipe = new Map<string, RecipeStep[]>();
+  for (const row of stepsResult.data ?? []) {
+    const list = stepsByRecipe.get(row.recipe_id) ?? [];
+    list.push({ text: row.text });
+    stepsByRecipe.set(row.recipe_id, list);
+  }
+
+  return (recipesResult.data ?? []).map((recipe) => ({
+    ...recipe,
+    source: recipe.source as RecipeWithDetails["source"],
+    ingredients: ingredientsByRecipe.get(recipe.id) ?? [],
+    steps: stepsByRecipe.get(recipe.id) ?? [],
+    photoUrl: getPhotoUrl(recipe.photo_path),
+  }));
+}
+
+export async function getRecipe(
+  householdId: string,
+  recipeId: string,
+): Promise<RecipeWithDetails | null> {
+  const recipes = await getRecipes(householdId);
+  return recipes.find((recipe) => recipe.id === recipeId) ?? null;
+}
+
 export function getPhotoUrl(path: string | null | undefined) {
   if (!path) return null;
   const encoded = path.split("/").map(encodeURIComponent).join("/");
-  return `/api/photos/${encoded}`;
-}
+  return `/api/photos/${encoded}`;}
 
 export async function getPhotoUrls(paths: (string | null)[]) {
   const result = new Map<string, string>();

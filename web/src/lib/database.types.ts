@@ -123,14 +123,14 @@ isOneToOne: false
                   ]
                 },"households": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"external_lookup_enabled": boolean,"id": string,"name": string,"updated_at": string
+                    "created_at": string,"created_by": string | null,"external_lookup_enabled": boolean,"gemini_api_key": string | null,"id": string,"name": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"external_lookup_enabled"?: boolean,"id"?: string,"name": string,"updated_at"?: string
+                    "created_at"?: string,"created_by"?: string | null,"external_lookup_enabled"?: boolean,"gemini_api_key"?: string | null,"id"?: string,"name": string,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"external_lookup_enabled"?: boolean,"id"?: string,"name"?: string,"updated_at"?: string
+                    "created_at"?: string,"created_by"?: string | null,"external_lookup_enabled"?: boolean,"gemini_api_key"?: string | null,"id"?: string,"name"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -323,6 +323,66 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"kitchen_recipe_ingredients": {
+                  Row: {
+                    "household_id": string,"id": string,"name": string,"optional": boolean,"qty": number | null,"recipe_id": string,"sort_order": number,"unit": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "household_id": string,"id"?: string,"name": string,"optional"?: boolean,"qty"?: number | null,"recipe_id": string,"sort_order"?: number,"unit"?: string | null
+                  }
+                  Update: {
+                    "household_id"?: string,"id"?: string,"name"?: string,"optional"?: boolean,"qty"?: number | null,"recipe_id"?: string,"sort_order"?: number,"unit"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "kitchen_recipe_ingredients_household_id_recipe_id_fkey"
+      columns: ["household_id","recipe_id"]
+isOneToOne: false
+      referencedRelation: "kitchen_recipes"
+      referencedColumns: ["household_id","id"]
+    }
+                  ]
+                },"kitchen_recipe_steps": {
+                  Row: {
+                    "household_id": string,"id": string,"recipe_id": string,"sort_order": number,"text": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "household_id": string,"id"?: string,"recipe_id": string,"sort_order"?: number,"text"?: string
+                  }
+                  Update: {
+                    "household_id"?: string,"id"?: string,"recipe_id"?: string,"sort_order"?: number,"text"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "kitchen_recipe_steps_household_id_recipe_id_fkey"
+      columns: ["household_id","recipe_id"]
+isOneToOne: false
+      referencedRelation: "kitchen_recipes"
+      referencedColumns: ["household_id","id"]
+    }
+                  ]
+                },"kitchen_recipes": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"deleted_at": string | null,"description": string,"household_id": string,"id": string,"photo_path": string | null,"servings": number,"source": string,"source_url": string | null,"title": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"description"?: string,"household_id": string,"id"?: string,"photo_path"?: string | null,"servings"?: number,"source"?: string,"source_url"?: string | null,"title": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"description"?: string,"household_id"?: string,"id"?: string,"photo_path"?: string | null,"servings"?: number,"source"?: string,"source_url"?: string | null,"title"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "kitchen_recipes_household_id_fkey"
+      columns: ["household_id"]
+isOneToOne: false
+      referencedRelation: "households"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"kitchen_units": {
                   Row: {
                     "created_at": string,"created_by": string | null,"household_id": string,"id": string,"name": string,"sort_order": number,"step_size": number,"updated_at": string
@@ -357,6 +417,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"user_ai_settings": {
+                  Row: {
+                    "gemini_api_key": string,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "gemini_api_key": string,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "gemini_api_key"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 }
           }
           Views: {
@@ -376,6 +450,7 @@ isOneToOne: false
               "created_at": string,
 "created_by": string | null,
 "external_lookup_enabled": boolean,
+"gemini_api_key": string | null,
 "id": string,
 "name": string,
 "updated_at": string

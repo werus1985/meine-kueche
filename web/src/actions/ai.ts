@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getActiveHousehold } from "@/lib/data";
+import { AI_KEY_MISSING_MESSAGE, resolveGeminiKey } from "@/lib/ai-key";
 import {
   callGemini,
   normalizeListItems,
@@ -19,6 +20,7 @@ export type AiRecipe = {
   missing: string[];
   steps: string[];
   time_minutes?: number;
+  servings?: number;
 };
 
 export type AiListItem = NormalizedListItem;
@@ -93,6 +95,7 @@ function normalizeRecipes(value: unknown, limit = 3): AiRecipe[] {
     .slice(0, limit)
     .map((entry, index) => {
       const time = Number(entry.time_minutes);
+      const servings = Number(entry.servings);
       return {
         name: String(entry.name ?? `Rezept ${index + 1}`).slice(0, 120),
         description:
@@ -103,6 +106,10 @@ function normalizeRecipes(value: unknown, limit = 3): AiRecipe[] {
         missing: toStringArray(entry.missing),
         steps: toStringArray(entry.steps),
         time_minutes: Number.isFinite(time) ? time : undefined,
+        servings:
+          Number.isFinite(servings) && servings >= 1 && servings <= 100
+            ? Math.round(servings)
+            : undefined,
       };
     });
 }
@@ -188,7 +195,8 @@ Vorratsregeln:
 - Bei normalen Wissensfragen antworte als klarer, normaler Text.
 - Wenn Nutzer Rezepte, Einkaufslisten, Produktlisten, Bestandslisten oder andere konkrete Listen anfordert, gib strukturierte Daten zurück, nicht Markdown.
 - Wähle type passend: "recipes", "shopping_list", "product_list", "stock_list" oder "general_list".
-- Rezeptformat: {"type":"recipes","message":"Einleitung","recipes":[{"name":"Name","description":"Beschreibung","ingredients":["Menge Zutat"],"missing":["fehlende Zutat"],"steps":["Schritt"],"time_minutes":20}]}
+- Rezeptformat: {"type":"recipes","message":"Einleitung","recipes":[{"name":"Name","description":"Beschreibung","servings":4,"ingredients":["Menge Zutat"],"missing":["fehlende Zutat"],"steps":["Schritt"],"time_minutes":20}]}
+- Gib servings als typische Portionenzahl des Gerichts an (bei Kuchen/Gebäck die Stückzahl).
 - Listenformat: {"type":"shopping_list","title":"Einkaufsliste","message":"Kurze Einleitung","items":[{"name":"Artikel","qty":"Menge","unit":"Einheit","category":"Kategorie","notes":"Hinweis"}]}
 - Bei einer Einkaufsliste nenne nur empfohlene, noch zu kaufende Artikel; unterscheide sie vom bereits vorhandenen Vorrat. Wenn passend, priorisiere Grundnahrungsmittel. Erfinde nicht, dass Artikel bereits vorhanden sind, wenn sie nur empfohlen werden.
 - Bei Produkt-/Vorratslisten nutze dieselbe items-Struktur. Wenn die Nutzerfrage keine konkrete Liste verlangt, gib normalen Text zurück.
@@ -201,12 +209,19 @@ Gesprächsverlauf:
 ${historyText || "(Beginn)"}
 Aktuelle Nachricht: ${text}`;
 
-  const gemini = await callGemini(prompt, {
-    temperature: 0.4,
-    maxOutputTokens: 4096,
-    // Internes „Nachdenken“ kostet unnötig Tokens und Zeit.
-    thinkingConfig: { thinkingBudget: 0 },
-  });
+  const keyInfo = await resolveGeminiKey();
+  if (!keyInfo) return { ok: false, message: AI_KEY_MISSING_MESSAGE };
+
+  const gemini = await callGemini(
+    prompt,
+    {
+      temperature: 0.4,
+      maxOutputTokens: 4096,
+      // Internes „Nachdenken“ kostet unnötig Tokens und Zeit.
+      thinkingConfig: { thinkingBudget: 0 },
+    },
+    keyInfo.key,
+  );
   if (!gemini.ok) return { ok: false, message: gemini.message };
 
   const parsed = parseJsonObject(gemini.text);
@@ -254,54 +269,6 @@ Aktuelle Nachricht: ${text}`;
     message: "",
     answer: cleanAnswer(gemini.text),
     responseType: "text",
-  };
-}
-
-export async function suggestRecipesAction(): Promise<AiResult> {
-  const context = await getActiveHousehold();
-  if (!context) return { ok: false, message: "Kein Haushalt ausgewählt." };
-
-  const { stock } = await loadKitchen(context.active.id);
-  if (stock.length === 0) {
-    return {
-      ok: false,
-      message:
-        "Im Vorrat sind noch keine Lebensmittel vorhanden. Lege zuerst Artikel an.",
-    };
-  }
-
-  const prompt = `Du bist Kochassistent der App „Meine Küche“. Erstelle 3 unterschiedliche einfache Rezepte.
-Nutze bevorzugt den vorhandenen Vorrat. Erfinde keine vorhandenen Lebensmittel oder Vorratsmengen.
-Nenne fehlende Zutaten ausdrücklich. Bevorzuge Zutaten, die bald ablaufen. Beachte Lebensmittelhygiene und unterscheide MHD von Verbrauchsdatum.
-Gib ausschließlich gültiges JSON ohne Markdown zurück:
-{"recipes":[{"name":"Rezeptname","description":"Kurzbeschreibung","ingredients":["Zutat und Menge"],"missing":["fehlende Zutat"],"steps":["Schritt 1"],"time_minutes":20}]}
-Vorrat: ${JSON.stringify(stock)}`;
-
-  const gemini = await callGemini(prompt, {
-    temperature: 0.4,
-    maxOutputTokens: 3072,
-    responseMimeType: "application/json",
-    // Ohne Denk-Tokens bleibt genug Budget für die komplette JSON-Antwort.
-    thinkingConfig: { thinkingBudget: 0 },
-  });
-  if (!gemini.ok) return { ok: false, message: gemini.message };
-
-  const parsed = parseJsonObject(gemini.text);
-  const recipes = normalizeRecipes(parsed?.recipes, 5);
-  if (recipes.length === 0) {
-    return {
-      ok: false,
-      message:
-        "Die KI hat keine gültigen Rezepte geliefert. Bitte versuche es erneut.",
-    };
-  }
-
-  return {
-    ok: true,
-    message: "",
-    answer: String(parsed?.message ?? "Hier sind deine Rezeptideen:"),
-    responseType: "recipes",
-    recipes,
   };
 }
 

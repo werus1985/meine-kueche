@@ -1,240 +1,57 @@
 "use client";
 
-import { Mic, MicOff, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from "react";
 
 import { inputClass, Label } from "@/components/ui";
+import { normalizeExpiryInput } from "@/lib/date-input";
 import { cn } from "@/lib/utils";
 
-type SpeechAlternative = { transcript: string };
-type SpeechResult = ArrayLike<SpeechAlternative>;
-type SpeechEvent = { results: ArrayLike<SpeechResult> };
-type SpeechErrorEvent = { error?: string };
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
-  onresult: ((event: SpeechEvent) => void) | null;
-  onerror: ((event: SpeechErrorEvent) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-};
-type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
-type SpeechWindow = Window & {
-  SpeechRecognition?: SpeechRecognitionConstructor;
-  webkitSpeechRecognition?: SpeechRecognitionConstructor;
-};
+const INVALID_HINT = "Kein gültiges Datum – z. B. 15.10.2026 oder 15102026.";
 
-const SPEECH_ERROR_MESSAGES: Record<string, string> = {
-  "service-not-allowed":
-    "Safari auf dem iPhone unterstützt die Spracheingabe nicht. Nutze das Feld „Datum diktieren“ mit dem Mikrofon deiner Tastatur.",
-  "not-allowed":
-    "Mikrofonzugriff wurde nicht erlaubt. Prüfe Einstellungen → Safari → Mikrofon („Fragen“) und erlaube den Zugriff beim nächsten Versuch.",
-  "audio-capture": "Kein Mikrofon verfügbar.",
-  "no-speech": "Kein Datum gehört – bitte erneut sprechen (z. B. „15.10.2026“).",
-  aborted: "Spracheingabe wurde abgebrochen.",
-  network:
-    "Netzwerkfehler bei der Spracheingabe – Verbindung prüfen und erneut versuchen.",
-};
-
-const months: Record<string, number> = {
-  januar: 1,
-  februar: 2,
-  marz: 3,
-  maerz: 3,
-  april: 4,
-  mai: 5,
-  juni: 6,
-  juli: 7,
-  august: 8,
-  september: 9,
-  oktober: 10,
-  november: 11,
-  dezember: 12,
-};
-
-const ordinals: Record<string, number> = {
-  erste: 1,
-  erster: 1,
-  ersten: 1,
-  erstem: 1,
-  erstes: 1,
-  zweite: 2,
-  zweiter: 2,
-  zweiten: 2,
-  zweites: 2,
-  dritte: 3,
-  dritter: 3,
-  dritten: 3,
-  drittes: 3,
-  vierte: 4,
-  vierter: 4,
-  vierten: 4,
-  fünfte: 5,
-  fünfter: 5,
-  fünften: 5,
-  sechste: 6,
-  sechster: 6,
-  sechsten: 6,
-  siebte: 7,
-  siebter: 7,
-  siebten: 7,
-  achte: 8,
-  achter: 8,
-  achten: 8,
-  neunte: 9,
-  neunter: 9,
-  neunten: 9,
-  zehnte: 10,
-  zehnter: 10,
-  zehnten: 10,
-  elfte: 11,
-  elfter: 11,
-  elften: 11,
-  zwölfte: 12,
-  zwölfter: 12,
-  zwölften: 12,
-};
-
-const smallNumbers: Record<string, number> = {
-  null: 0,
-  ein: 1,
-  eins: 1,
-  eine: 1,
-  einen: 1,
-  zwei: 2,
-  drei: 3,
-  vier: 4,
-  fünf: 5,
-  sechs: 6,
-  sieben: 7,
-  acht: 8,
-  neun: 9,
-  zehn: 10,
-  elf: 11,
-  zwölf: 12,
-  dreizehn: 13,
-  vierzehn: 14,
-  fünfzehn: 15,
-  sechzehn: 16,
-  siebzehn: 17,
-  achtzehn: 18,
-  neunzehn: 19,
-};
-
-const tens: Record<string, number> = {
-  zwanzig: 20,
-  dreißig: 30,
-  vierzig: 40,
-  fünfzig: 50,
-  sechzig: 60,
-  siebzig: 70,
-  achtzig: 80,
-  neunzig: 90,
-};
-
-function numberWord(value: string): number | null {
-  const token = value.toLocaleLowerCase("de-DE").replace(/[.,]/g, "");
-  if (/^\d{1,4}$/.test(token)) return Number(token);
-  if (ordinals[token] !== undefined) return ordinals[token];
-  if (smallNumbers[token] !== undefined) return smallNumbers[token];
-  if (tens[token] !== undefined) return tens[token];
-
-  const yearParts = token.match(/^(.+?)tausend(.*)$/);
-  if (yearParts) {
-    const thousand = smallNumbers[yearParts[1]];
-    const rest = yearParts[2] ? numberWord(yearParts[2]) : 0;
-    if (thousand !== undefined && rest !== null) return thousand * 1000 + rest;
-  }
-
-  const ordinalSuffix = token.replace(/(?:sten|ster|stes|ste|ten|ter|tes|tem)$/, "");
-  if (ordinalSuffix !== token) {
-    const parsed = numberWord(ordinalSuffix);
-    if (parsed !== null) return parsed;
-  }
-
-  const compound = token.match(/^(.+?)und(.+)$/);
-  if (compound) {
-    const one = smallNumbers[compound[1]];
-    const ten = tens[compound[2]];
-    if (one !== undefined && ten !== undefined) return ten + one;
-  }
-  return null;
+function formatDigits(digits: string) {
+  const value = digits.slice(0, 8);
+  if (value.length <= 2) return value;
+  if (value.length <= 4) return `${value.slice(0, 2)}.${value.slice(2)}`;
+  return `${value.slice(0, 2)}.${value.slice(2, 4)}.${value.slice(4)}`;
 }
 
-function toIsoDate(year: number, month: number, day: number) {
-  if (year >= 0 && year < 100) year += 2000;
-  const date = new Date(Date.UTC(year, month - 1, day));
-  if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== month - 1 ||
-    date.getUTCDate() !== day
-  ) {
-    return null;
-  }
-  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+function countDigits(value: string) {
+  return value.replace(/\D/g, "").length;
 }
 
-export function parseGermanSpokenDate(
-  transcript: string,
-  options: { strictYear?: boolean } = {},
-) {
-  const normalized = transcript
-    .toLocaleLowerCase("de-DE")
-    .trim();
-  // Beim Live-Diktat nur vierstellige Jahre akzeptieren, damit beim Tippen
-  // keine halben Jahre („15.10.2“) als Datum gelten.
-  const numeric = normalized.match(
-    options.strictYear
-      ? /\b(\d{1,2})\s*[./-]\s*(\d{1,2})\s*[./-]\s*(\d{4})\b/
-      : /\b(\d{1,2})\s*[./-]\s*(\d{1,2})\s*[./-]\s*(\d{2,4})\b/,
-  );
-  if (numeric) return toIsoDate(Number(numeric[3]), Number(numeric[2]), Number(numeric[1]));
+/**
+ * Ist der Feldinhalt exakt das, was die Ziffern-Maske erzeugen würde? Nur dann
+ * darf sie weiterformatieren – strukturierte Eingaben (Diktat, getippte
+ * Punkte) bleiben unangetastet.
+ */
+function isMaskShaped(value: string) {
+  return value === formatDigits(value.replace(/\D/g, ""));
+}
 
-  const words = normalized.match(/[\p{L}\d]+/gu) ?? [];
-  const monthName = words.find((word) => {
-    const key = word.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return months[key] !== undefined || months[key.replace(/s$/, "")] !== undefined;
-  });
-  if (monthName) {
-    const plainMonth = monthName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const month = months[plainMonth] ?? months[plainMonth.replace(/s$/, "")];
-    const index = words.findIndex((word) => word === monthName);
-    const day = index > 0 ? numberWord(words[index - 1]) : null;
-    let year = index >= 0 && index + 1 < words.length ? numberWord(words[index + 1]) : null;
-    if (year === 2000 && index + 2 < words.length) {
-      const remainder = numberWord(words[index + 2]);
-      if (remainder !== null && remainder < 1000) year += remainder;
-    }
-    if (day !== null && year !== null) {
-      if (
-        options.strictYear &&
-        /^\d+$/.test(words[index + 1] ?? "") &&
-        (words[index + 1] ?? "").length !== 4
-      ) {
-        return null;
-      }
-      return toIsoDate(year, month, day);
+/** Jahr noch nicht fertig getippt („15.10.2“, „15.10.202“)? */
+function isPartialYear(value: string) {
+  const match = value.trim().match(/^\d{1,2}[./-]\d{1,2}[./-](\d+)$/);
+  return Boolean(match && match[1].length !== 2 && match[1].length !== 4);
+}
+
+/** Cursorposition hinter der n-ten Ziffer (Punkte zählen nicht mit). */
+function caretAfterDigits(value: string, digits: number) {
+  if (digits <= 0) return 0;
+  let seen = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    if (/\d/.test(value[index])) {
+      seen += 1;
+      if (seen === digits) return index + 1;
     }
   }
-
-  if (words.length === 3) {
-    const day = numberWord(words[0]);
-    const month = numberWord(words[1]);
-    const year = numberWord(words[2]);
-    if (day !== null && month !== null && year !== null) {
-      if (
-        options.strictYear &&
-        /^\d+$/.test(words[2]) &&
-        words[2].length !== 4
-      ) {
-        return null;
-      }
-      return toIsoDate(year, month, day);
-    }
-  }
-  return null;
+  return value.length;
 }
 
 export function ExpiryDateField({
@@ -242,123 +59,126 @@ export function ExpiryDateField({
 }: {
   defaultValue: string;
 }) {
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const dictationTimer = useRef<number | null>(null);
-  const [value, setValue] = useState(defaultValue);
-  const [speechAvailable, setSpeechAvailable] = useState(false);
-  const [dictationOpen, setDictationOpen] = useState(false);
-  const [dictationText, setDictationText] = useState("");
-  const [listening, setListening] = useState(false);
-  const [speechMessage, setSpeechMessage] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pendingCaret = useRef<number | null>(null);
+  const [state, setState] = useState(() => ({
+    text: normalizeExpiryInput(defaultValue)?.display ?? defaultValue,
+    // Zählt Änderungen, damit jede Eingabe einen Re-Render auslöst – auch
+    // wenn der Text unverändert bleibt (z. B. im strukturierten Modus).
+    seq: 0,
+  }));
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      const speechWindow = window as SpeechWindow;
-      const available =
-        window.isSecureContext &&
-        Boolean(speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition);
-      setSpeechAvailable(available);
-      // Auf Geräten ohne Web-Speech (v. a. iOS Safari) direkt das
-      // Tastatur-Diktat anbieten.
-      let remembered = false;
-      try {
-        remembered = window.localStorage.getItem("mk:mhd-dictation") === "1";
-      } catch {
-        remembered = false;
-      }
-      setDictationOpen(!available || remembered);
-    }, 0);
-    return () => {
-      window.clearTimeout(timeout);
-      if (dictationTimer.current) window.clearTimeout(dictationTimer.current);
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
-    };
-  }, []);
+  const parsed = normalizeExpiryInput(state.text);
+  // Bestätigung erst, wenn die Eingabe ein vollständiges Jahr enthält – sonst
+  // würden beim Tippen Zwischenstände wie „15.10.2002“ aufblitzen.
+  const confirmed =
+    parsed?.hasYear && !isPartialYear(state.text) ? parsed : null;
 
-  function applyDictation() {
-    if (dictationTimer.current) {
-      window.clearTimeout(dictationTimer.current);
-      dictationTimer.current = null;
-    }
-    const text = dictationText.trim();
-    if (!text) return;
-    const date = parseGermanSpokenDate(text);
-    if (!date) {
-      setSpeechMessage(`Kein vollständiges Datum erkannt („${text}“).`);
-      return;
-    }
-    setValue(date);
-    setDictationText("");
-    setSpeechMessage("Datum übernommen.");
+  useLayoutEffect(() => {
+    const position = pendingCaret.current;
+    if (position === null) return;
+    pendingCaret.current = null;
+    inputRef.current?.setSelectionRange(position, position);
+  }, [state]);
+
+  function update(text: string, caret: number | null) {
+    pendingCaret.current = caret;
+    setState((current) => ({ text, seq: current.seq + 1 }));
   }
 
-  function handleDictationChange(next: string) {
-    setDictationText(next);
-    if (next.trim()) setSpeechMessage(null);
-    if (dictationTimer.current) window.clearTimeout(dictationTimer.current);
-    // Diktat kommt streaming herein – kurz warten, bis der Satz vollständig
-    // ist, dann automatisch übernehmen.
-    dictationTimer.current = window.setTimeout(() => {
-      const date = parseGermanSpokenDate(next, { strictYear: true });
-      if (!date) return;
-      setValue(date);
-      setDictationText("");
-      setSpeechMessage("Datum übernommen.");
-    }, 900);
-  }
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const raw = input.value;
+    const caret = input.selectionStart ?? raw.length;
+    const inputEvent = event.nativeEvent as InputEvent;
+    const inputType = inputEvent.inputType;
+    const data = inputEvent.data ?? "";
+    const hasSelection = (input.selectionEnd ?? caret) !== caret;
+    setError(null);
 
-  function startSpeechRecognition() {
-    const speechWindow = window as SpeechWindow;
-    const Constructor = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
-    if (!Constructor || !window.isSecureContext) return;
-
-    const recognition = new Constructor();
-    recognitionRef.current = recognition;
-    recognition.lang = "de-DE";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 3;
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript?.trim() ?? "";
-      const date = parseGermanSpokenDate(transcript);
-      if (!date) {
-        setSpeechMessage(`Kein vollständiges Datum erkannt${transcript ? ` („${transcript}“)` : ""}.`);
+    // Eingefügtes ISO-Datum (z. B. aus der Datenbank) direkt übernehmen.
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(raw.trim())) {
+      const iso = normalizeExpiryInput(raw);
+      if (iso) {
+        update(iso.display, iso.display.length);
         return;
       }
-      setValue(date);
-      setSpeechMessage("Datum übernommen.");
-    };
-    recognition.onerror = (event) => {
-      const code = event.error ?? "unbekannt";
-      if (code === "service-not-allowed") {
-        // iOS Safari unterstützt die Web-Speech-API nicht – dauerhaft auf
-        // das Tastatur-Diktat umschalten.
-        setDictationOpen(true);
-        try {
-          window.localStorage.setItem("mk:mhd-dictation", "1");
-        } catch {
-          // ignorieren
+    }
+
+    // Diktierte Wortformen („fünfzehnter Oktober“) bleiben unverändert.
+    if (/\p{L}/u.test(raw)) {
+      update(raw, null);
+      return;
+    }
+
+    const previous = state.text;
+
+    if (inputType === "deleteContentBackward") {
+      // In strukturiertem Text (vom Diktat oder selbst getippte Punkte)
+      // löscht der Browser ganz normal.
+      if (!isMaskShaped(previous)) {
+        update(raw, null);
+        return;
+      }
+      let digits = raw.replace(/\D/g, "");
+      let digitsBeforeCaret = countDigits(raw.slice(0, caret));
+      // Rücktaste auf einem automatisch gesetzten Punkt: zusätzlich die Ziffer
+      // davor entfernen, sonst wäre die Taste wirkungslos.
+      if (raw.length < previous.length && previous[caret] === ".") {
+        const removedDigit = countDigits(previous.slice(0, caret)) - 1;
+        if (removedDigit >= 0) {
+          digits =
+            digits.slice(0, removedDigit) + digits.slice(removedDigit + 1);
+          digitsBeforeCaret = Math.max(0, digitsBeforeCaret - 1);
         }
       }
-      setSpeechMessage(
-        SPEECH_ERROR_MESSAGES[code] ??
-          `Spracheingabe fehlgeschlagen (Code: ${code}) – bitte Datum manuell eingeben.`,
-      );
-      setListening(false);
-    };
-    recognition.onend = () => setListening(false);
-    setSpeechMessage("Bitte ein vollständiges Datum sagen, zum Beispiel „15.10.2026“.");
-    setListening(true);
-    try {
-      recognition.start();
-    } catch (cause) {
-      setListening(false);
-      setSpeechMessage(
-        cause instanceof Error
-          ? `Spracheingabe konnte nicht gestartet werden (${cause.name}: ${cause.message}) – bitte Datum manuell eingeben.`
-          : "Spracheingabe konnte nicht gestartet werden – bitte Datum manuell eingeben.",
-      );
+      const formatted = formatDigits(digits);
+      update(formatted, caretAfterDigits(formatted, digitsBeforeCaret));
+      return;
     }
+
+    // Die Maske greift nur beim Tippen einzelner Ziffern in ein reines
+    // Ziffernfeld. Diktat-Blöcke, eingefügte Punkte oder Ersetzungen durch
+    // die Tastatur bleiben unangetastet – sonst würden Daten wie „10.4.2020“
+    // zu „10.42.020“ umgruppiert.
+    const isSingleDigit = !hasSelection && data.length === 1 && /^\d$/.test(data);
+    if (isSingleDigit && isMaskShaped(previous)) {
+      const digits = raw.replace(/\D/g, "");
+      if (digits.length <= 8) {
+        const formatted = formatDigits(digits);
+        update(formatted, caretAfterDigits(formatted, countDigits(raw.slice(0, caret))));
+        return;
+      }
+    }
+
+    update(raw, null);
+  }
+
+  function commit() {
+    const text = state.text.trim();
+    if (!text) {
+      setError(null);
+      return;
+    }
+    const result = normalizeExpiryInput(text);
+    if (!result) {
+      setError(INVALID_HINT);
+      return;
+    }
+    setError(null);
+    if (result.display !== state.text) update(result.display, null);
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    const text = state.text.trim();
+    if (text && !normalizeExpiryInput(text)) {
+      event.preventDefault();
+      setError(INVALID_HINT);
+      return;
+    }
+    commit();
   }
 
   return (
@@ -366,22 +186,29 @@ export function ExpiryDateField({
       <Label htmlFor="expiry">Mindesthaltbarkeit</Label>
       <div className="flex min-w-0 items-center gap-2">
         <input
+          ref={inputRef}
           id="expiry"
           name="expiry"
-          type="date"
-          value={value}
-          onChange={(event) => {
-            setValue(event.target.value);
-            setSpeechMessage(null);
-          }}
-          className={cn(inputClass, "min-w-0 max-w-full")}
+          type="text"
+          value={state.text}
+          onChange={handleChange}
+          onBlur={commit}
+          onKeyDown={handleKeyDown}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="TT.MM.JJJJ"
+          aria-describedby="expiry-hint"
+          aria-invalid={error ? true : undefined}
+          className={cn(inputClass, "min-w-0 max-w-full tabular-nums")}
         />
-        {value ? (
+        {state.text ? (
           <button
             type="button"
             onClick={() => {
-              setValue("");
-              setSpeechMessage(null);
+              update("", null);
+              setError(null);
+              inputRef.current?.focus();
             }}
             aria-label="MHD entfernen"
             title="MHD entfernen"
@@ -390,91 +217,24 @@ export function ExpiryDateField({
             <X className="size-4" />
           </button>
         ) : null}
-        {/* Mikrofon immer zeigen – bei fehlendem HTTPS erklärt der Klick,
-            warum Spracheingabe dort nicht verfügbar ist. */}
-        <button
-          type="button"
-          onClick={() => {
-            if (!speechAvailable) {
-              setSpeechMessage(
-                "Spracheingabe benötigt HTTPS (oder localhost). Nutze alternativ das Feld „Datum diktieren“ mit dem Mikrofon deiner Tastatur.",
-              );
-              setDictationOpen(true);
-              return;
-            }
-            if (listening) {
-              recognitionRef.current?.stop();
-              setListening(false);
-            } else {
-              startSpeechRecognition();
-            }
-          }}
-          aria-label={
-            !speechAvailable
-              ? "Spracheingabe (HTTPS erforderlich)"
-              : listening
-                ? "Spracheingabe stoppen"
-                : "MHD sprechen"
-          }
-          title={
-            !speechAvailable
-              ? "Spracheingabe benötigt HTTPS (oder localhost)"
-              : listening
-                ? "Spracheingabe stoppen"
-                : "MHD sprechen"
-          }
-          className={cn(
-            "inline-flex size-11 shrink-0 items-center justify-center rounded-xl border transition",
-            listening
-              ? "border-red-200 bg-red-50 text-red-700"
-              : speechAvailable
-                ? "border-stone-300 bg-white text-stone-600 hover:bg-emerald-50 hover:text-emerald-800"
-                : "border-stone-200 bg-stone-50 text-stone-300",
-          )}
-        >
-          {listening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
-        </button>
       </div>
-
-      {dictationOpen ? (
-        <div className="mt-1.5">
-          <Label htmlFor="expiry-dictation">Datum diktieren</Label>
-          <input
-            id="expiry-dictation"
-            type="text"
-            value={dictationText}
-            onChange={(event) => handleDictationChange(event.target.value)}
-            onBlur={applyDictation}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                applyDictation();
-              }
-            }}
-            placeholder="z. B. 15.10.2026 oder „fünfzehnter zehnter …“"
-            autoComplete="off"
-            className={inputClass}
-          />
-          <p className="mt-1 text-[11px] text-stone-500">
-            Tippe ins Feld und nutze das Mikrofon deiner Tastatur – das Datum
-            wird automatisch übernommen.
-          </p>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setDictationOpen(true)}
-          className="mt-1 text-[11px] font-medium text-emerald-800 hover:underline"
-        >
-          Datum per Tastatur diktieren
-        </button>
-      )}
-
-      {speechMessage ? (
-        <p aria-live="polite" className="mt-1 text-xs text-stone-500">
-          {speechMessage}
-        </p>
-      ) : null}
+      <p
+        id="expiry-hint"
+        aria-live="polite"
+        className={cn(
+          "mt-1 text-[11px]",
+          error
+            ? "text-red-700"
+            : confirmed
+              ? "text-emerald-700"
+              : "text-stone-500",
+        )}
+      >
+        {error ??
+          (confirmed
+            ? `✓ ${confirmed.display}`
+            : "Ziffern ohne Punkte reichen, z. B. 15102026 – Diktat über die Mikrofon-Taste der Tastatur.")}
+      </p>
     </div>
   );
 }

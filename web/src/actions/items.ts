@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { getActiveHousehold } from "@/lib/data";
+import { normalizeExpiryInput } from "@/lib/date-input";
 import {
   importExternalPhoto,
   removePhoto,
@@ -16,6 +17,17 @@ import { normalizeBarcode, todayIso } from "@/lib/utils";
 function optionalText(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
   return text.length > 0 ? text : null;
+}
+
+/**
+ * MHD-Eingabe (Textfeld: „15.10.2026“, „15102026“, Diktat) in ISO umwandeln.
+ * `invalid` markiert eine nicht leerbare, aber unlesbare Eingabe.
+ */
+function parseExpiryField(value: FormDataEntryValue | null) {
+  const raw = optionalText(value);
+  if (!raw) return { iso: null, invalid: false };
+  const parsed = normalizeExpiryInput(raw);
+  return parsed ? { iso: parsed.iso, invalid: false } : { iso: null, invalid: true };
 }
 
 function optionalNumber(value: FormDataEntryValue | null) {
@@ -123,6 +135,15 @@ export async function saveItemAction(
     return {
       ok: false,
       message: "Ein Barcode muss aus 8 bis 14 Ziffern bestehen.",
+    };
+  }
+
+  const expiryField = parseExpiryField(formData.get("expiry"));
+  if (expiryField.invalid) {
+    return {
+      ok: false,
+      message:
+        "Bitte das MHD als Datum eingeben – z. B. 15.10.2026 oder 15102026.",
     };
   }
 
@@ -244,7 +265,7 @@ export async function saveItemAction(
         ? product!.category_id
         : optionalText(formData.get("category_id")),
     location_id: optionalText(formData.get("location_id")),
-    expiry: optionalText(formData.get("expiry")),
+    expiry: expiryField.iso,
     purchased_at: optionalText(formData.get("purchased_at")) ?? (id ? null : todayIso()),
     notes,
     checked: kind === "shop" ? formData.get("checked") === "on" : false,
@@ -294,7 +315,7 @@ export async function saveItemAction(
       p_photo_path: productPhotoPath as string,
       p_qty: optionalNumber(formData.get("qty")) as number,
       p_location_id: optionalText(formData.get("location_id")) as string,
-      p_expiry: optionalText(formData.get("expiry")) as string,
+      p_expiry: expiryField.iso as string,
       p_purchased_at: optionalText(formData.get("purchased_at")) as string,
       p_notes: notes,
       p_checked: kind === "shop" && formData.get("checked") === "on",
@@ -719,6 +740,92 @@ export async function deleteItemAction(formData: FormData): Promise<void> {
       ? redirectTo
       : "/items";
   redirect(safeRedirect);
+}
+
+const BULK_DELETE_LIMIT = 500;
+
+/** Batch-Löschen: ausgewählte Vorratsartikel in einem Rutsch entfernen. */
+export async function deleteItemsAction(ids: string[]): Promise<void> {
+  const context = await getActiveHousehold();
+  if (!context) redirect("/onboarding");
+  if (!context.active.canWrite) redirect("/items?error=keine-berechtigung");
+
+  const unique = [
+    ...new Set(
+      (Array.isArray(ids) ? ids : []).filter(
+        (id): id is string => typeof id === "string" && id.length > 0,
+      ),
+    ),
+  ].slice(0, BULK_DELETE_LIMIT);
+  if (unique.length === 0) redirect("/items?kind=stock");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("kitchen_items")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", unique)
+    .eq("household_id", context.active.id)
+    .eq("kind", "stock")
+    .is("deleted_at", null)
+    .select("id");
+
+  if (error) {
+    redirect(`/items?kind=stock&error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/", "layout");
+  redirect(`/items?kind=stock&deleted=${data?.length ?? 0}`);
+}
+
+/** Alle abgehakten Einkaufs-Einträge löschen. */
+export async function deleteCheckedShoppingAction(): Promise<void> {
+  const context = await getActiveHousehold();
+  if (!context) redirect("/onboarding");
+  if (!context.active.canWrite) {
+    redirect("/items?kind=shop&error=keine-berechtigung");
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("kitchen_items")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("household_id", context.active.id)
+    .eq("kind", "shop")
+    .eq("checked", true)
+    .is("deleted_at", null)
+    .select("id");
+
+  if (error) {
+    redirect(`/items?kind=shop&error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/", "layout");
+  redirect(`/items?kind=shop&deleted=${data?.length ?? 0}`);
+}
+
+/** Komplette Einkaufsliste (offen und erledigt) leeren. */
+export async function clearShoppingListAction(): Promise<void> {
+  const context = await getActiveHousehold();
+  if (!context) redirect("/onboarding");
+  if (!context.active.canWrite) {
+    redirect("/items?kind=shop&error=keine-berechtigung");
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("kitchen_items")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("household_id", context.active.id)
+    .eq("kind", "shop")
+    .is("deleted_at", null)
+    .select("id");
+
+  if (error) {
+    redirect(`/items?kind=shop&error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/", "layout");
+  redirect(`/items?kind=shop&cleared=${data?.length ?? 0}`);
 }
 
 export type ItemActionResult = {

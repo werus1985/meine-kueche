@@ -126,8 +126,10 @@ export function QuantityControl({
           inputMode="decimal"
           aria-label="Menge"
           className={cn(
-            "border-x border-stone-200 bg-white px-1 text-center font-semibold text-stone-900 outline-none focus:bg-[var(--accent-50)]",
-            compact ? "h-9 w-10 text-xs" : "w-12 py-2 text-sm",
+            // 16 px: iOS Safari zoomt beim Fokussieren automatisch, sobald ein
+            // Eingabefeld kleiner als 16 px gesetzt ist.
+            "border-x border-stone-200 bg-white px-1 text-center text-base font-semibold text-stone-900 outline-none focus:bg-[var(--accent-50)]",
+            compact ? "h-9 w-12" : "w-14 py-2",
           )}
         />
         <button

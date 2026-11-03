@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  BookmarkPlus,
+  Check,
   ChefHat,
   Clock,
   Loader2,
@@ -9,21 +11,21 @@ import {
   ShoppingCart,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import {
   addItemsToShoppingAction,
   chatAction,
-  suggestRecipesAction,
   type AiHistoryEntry,
   type AiListItem,
   type AiRecipe,
   type AiResponseType,
   type AiResult,
 } from "@/actions/ai";
+import { saveRecipeFromChatAction } from "@/actions/recipes";
 import {
   Alert,
-  Badge,
   buttonGhost,
   buttonPrimary,
   buttonSecondary,
@@ -129,6 +131,10 @@ export function AiChat({
   const [input, setInput] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [addingKey, setAddingKey] = useState<string | null>(null);
+  const [savingRecipeKey, setSavingRecipeKey] = useState<string | null>(null);
+  const [savedRecipeKeys, setSavedRecipeKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [pending, startTransition] = useTransition();
   const [addPending, startAdd] = useTransition();
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -156,21 +162,20 @@ export function AiChat({
     });
   }
 
-  function requestRecipes() {
-    if (pending || !configured || stockCount === 0) return;
+  function saveRecipe(key: string, recipe: AiRecipe) {
+    if (!canWrite || savingRecipeKey || savedRecipeKeys.has(key)) return;
+    setSavingRecipeKey(key);
     setNotice(null);
-    setMessages((previous) => [
-      ...previous,
-      {
-        id: newId(),
-        role: "user",
-        text: "Bitte finde Rezepte aus meinem Vorrat – gern mit Zutaten, die bald ablaufen.",
-      },
-    ]);
-
     startTransition(async () => {
-      const result = await suggestRecipesAction();
-      setMessages((previous) => [...previous, toAssistantMessage(result)]);
+      try {
+        const result = await saveRecipeFromChatAction(recipe);
+        if (result.ok) {
+          setSavedRecipeKeys((previous) => new Set(previous).add(key));
+        }
+        setNotice(result.message);
+      } finally {
+        setSavingRecipeKey(null);
+      }
     });
   }
 
@@ -191,47 +196,19 @@ export function AiChat({
   const disabled = !configured || pending;
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-2xl">
-            <p className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-900">
-              <ChefHat className="size-5" /> Dein KI-Küchenhelfer
-            </p>
-            <p className="mt-1 text-sm text-stone-600">
-              Frag nach Rezepten aus deinem Vorrat, nach Zutaten die bald
-              ablaufen oder nach einer Einkaufsliste. Fehlende Zutaten kannst du
-              direkt in den Einkauf übernehmen.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Badge tone="green">{stockCount} Artikel im Vorrat</Badge>
-              <Badge tone={expiringCount > 0 ? "amber" : "neutral"}>
-                {expiringCount} bald ablaufend
-              </Badge>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={requestRecipes}
-            disabled={disabled || stockCount === 0}
-            className={buttonPrimary}
-          >
-            {pending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Sparkles className="size-4" />
-            )}
-            Rezeptideen finden
-          </button>
-        </div>
-      </div>
-
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {!configured ? (
         <Alert tone="warning">
-          Die KI-Küche ist noch nicht verbunden. Trage{" "}
-          <code className="rounded bg-white/70 px-1">GEMINI_API_KEY</code> in{" "}
-          <code className="rounded bg-white/70 px-1">web/.env.local</code> ein
-          und starte den Entwicklungsserver neu.
+          Für die KI fehlt noch ein Gemini-API-Key. Hinterlege deinen eigenen
+          unter{" "}
+          <Link href="/settings/profile" className="font-medium underline">
+            Einstellungen → Profil
+          </Link>{" "}
+          oder einen gemeinsamen Key unter{" "}
+          <Link href="/settings/household" className="font-medium underline">
+            Einstellungen → Haushalt
+          </Link>
+          .
         </Alert>
       ) : null}
 
@@ -244,10 +221,10 @@ export function AiChat({
 
       {notice ? <Alert tone="success">{notice}</Alert> : null}
 
-      <div className="rounded-2xl border border-stone-200 bg-white shadow-sm">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
         <div
           ref={listRef}
-          className="max-h-[58vh] min-h-56 space-y-3 overflow-y-auto p-4"
+          className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4"
         >
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -260,6 +237,10 @@ export function AiChat({
               <p className="mt-1 max-w-md text-sm text-stone-500">
                 Die KI kennt deinen Vorrat inklusive Mengen und
                 Mindesthaltbarkeitsdaten.
+              </p>
+              <p className="mt-1 text-xs text-stone-400">
+                {stockCount} Artikel im Vorrat
+                {expiringCount > 0 ? ` · ${expiringCount} bald ablaufend` : ""}
               </p>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {exampleQuestions.map((question) => (
@@ -307,12 +288,38 @@ export function AiChat({
                           <h3 className="text-sm font-semibold text-stone-900">
                             {recipe.name}
                           </h3>
-                          {recipe.time_minutes ? (
-                            <span className="inline-flex items-center gap-1 text-xs text-stone-500">
-                              <Clock className="size-3" />
-                              {recipe.time_minutes} Min.
-                            </span>
-                          ) : null}
+                          <span className="flex shrink-0 items-center gap-2">
+                            {recipe.time_minutes ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-stone-500">
+                                <Clock className="size-3" />
+                                {recipe.time_minutes} Min.
+                              </span>
+                            ) : null}
+                            {canWrite ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  saveRecipe(`${message.id}-save-${index}`, recipe)
+                                }
+                                disabled={
+                                  savingRecipeKey === `${message.id}-save-${index}` ||
+                                  savedRecipeKeys.has(`${message.id}-save-${index}`)
+                                }
+                                className={cn(buttonSecondary, "px-2 py-1 text-[11px]")}
+                              >
+                                {savedRecipeKeys.has(`${message.id}-save-${index}`) ? (
+                                  <Check className="size-3.5" />
+                                ) : savingRecipeKey === `${message.id}-save-${index}` ? (
+                                  <Loader2 className="size-3.5 animate-spin" />
+                                ) : (
+                                  <BookmarkPlus className="size-3.5" />
+                                )}
+                                {savedRecipeKeys.has(`${message.id}-save-${index}`)
+                                  ? "Gespeichert"
+                                  : "Rezept speichern"}
+                              </button>
+                            ) : null}
+                          </span>
                         </div>
                         {recipe.description ? (
                           <p className="mt-1 text-sm text-stone-600">

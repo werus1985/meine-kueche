@@ -1,10 +1,9 @@
-import { ChevronDown } from "lucide-react";
-
 import { saveCategoryRuleAction } from "@/actions/settings";
 import { CategoryManager } from "@/components/category-manager";
 import { LocationManager } from "@/components/location-manager";
 import { ProductGroupManager } from "@/components/product-group-manager";
 import { QuickFilterManager } from "@/components/quick-filter-manager";
+import { SettingsSection } from "@/components/settings-section";
 import { SubmitButton } from "@/components/submit-button";
 import { UnitManager } from "@/components/unit-manager";
 import { Alert, Card, CardHeader, PageHeader, selectClass } from "@/components/ui";
@@ -133,79 +132,74 @@ export default async function SettingsPage({
       ) : null}
 
       <div className="space-y-2.5">
-        <details id="kategorien" open={params.section === "kategorien"} className="group scroll-mt-32">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-900 shadow-sm [&::-webkit-details-marker]:hidden">
-            Kategorien <ChevronDown className="size-4 text-stone-400 transition group-open:rotate-180" />
-          </summary>
-          <div className="pt-2">
-            <CategoryManager
-              key={`categories-${params.deleted ?? ""}-${params.error ?? ""}`}
-              canWrite={active.canWrite}
-              categories={categories.map((category) => ({
-                id: category.id,
-                name: category.name,
-                itemCount: categoryCounts.get(category.id) ?? 0,
-              }))}
-            />
-          </div>
-        </details>
+        <SettingsSection
+          id="kategorien"
+          title="Kategorien"
+          open={params.section === "kategorien"}
+        >
+          <CategoryManager
+            key={`categories-${params.deleted ?? ""}-${params.error ?? ""}`}
+            canWrite={active.canWrite}
+            categories={categories.map((category) => ({
+              id: category.id,
+              name: category.name,
+              itemCount: categoryCounts.get(category.id) ?? 0,
+            }))}
+          />
+        </SettingsSection>
 
-        <details id="lagerorte" open={params.section === "lagerorte"} className="group scroll-mt-32">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-900 shadow-sm [&::-webkit-details-marker]:hidden">
-            Lagerorte <ChevronDown className="size-4 text-stone-400 transition group-open:rotate-180" />
-          </summary>
-          <div className="pt-2">
-            <LocationManager
-              key={`locations-${params.deleted ?? ""}-${params.error ?? ""}`}
-              canWrite={active.canWrite}
-              locations={locations.map((location) => ({
-                id: location.id,
-                name: location.name,
-                sort_order: location.sort_order,
-                itemCount: locationCounts.get(location.id) ?? 0,
-              }))}
-            />
-          </div>
-        </details>
+        <SettingsSection
+          id="lagerorte"
+          title="Lagerorte"
+          open={params.section === "lagerorte"}
+        >
+          <LocationManager
+            key={`locations-${params.deleted ?? ""}-${params.error ?? ""}`}
+            canWrite={active.canWrite}
+            locations={locations.map((location) => ({
+              id: location.id,
+              name: location.name,
+              itemCount: locationCounts.get(location.id) ?? 0,
+            }))}
+          />
+        </SettingsSection>
 
-        <details id="einheiten" open={params.section === "einheiten"} className="group scroll-mt-32">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-900 shadow-sm [&::-webkit-details-marker]:hidden">
-            Einheiten <ChevronDown className="size-4 text-stone-400 transition group-open:rotate-180" />
-          </summary>
-          <div className="pt-2">
-            <UnitManager
-              key={`units-${params.deleted ?? ""}-${params.error ?? ""}`}
-              canWrite={active.canWrite}
-              units={units.map((unit) => ({
-                id: unit.id,
-                name: unit.name,
-                step_size: Number(unit.step_size),
-                itemCount: unitCounts.get(unit.id) ?? 0,
-              }))}
-            />
-          </div>
-        </details>
+        <SettingsSection
+          id="einheiten"
+          title="Einheiten"
+          open={params.section === "einheiten"}
+        >
+          <UnitManager
+            key={`units-${params.deleted ?? ""}-${params.error ?? ""}`}
+            canWrite={active.canWrite}
+            units={units.map((unit) => ({
+              id: unit.id,
+              name: unit.name,
+              step_size: Number(unit.step_size),
+              itemCount: unitCounts.get(unit.id) ?? 0,
+            }))}
+          />
+        </SettingsSection>
 
-        <details id="produktgruppen" open={params.section === "produktgruppen"} className="group scroll-mt-32">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-900 shadow-sm [&::-webkit-details-marker]:hidden">
-            Produktgruppen <ChevronDown className="size-4 text-stone-400 transition group-open:rotate-180" />
-          </summary>
-          <div className="pt-2">
-            <ProductGroupManager
-              groups={unusedProductRows}
-              categories={categories.map(({ id, name }) => ({ id, name }))}
-              units={units.map(({ id, name }) => ({ id, name }))}
-              canWrite={active.canWrite}
-            />
-          </div>
-        </details>
+        <SettingsSection
+          id="produktgruppen"
+          title="Produktgruppen"
+          open={params.section === "produktgruppen"}
+        >
+          <ProductGroupManager
+            groups={unusedProductRows}
+            categories={categories.map(({ id, name }) => ({ id, name }))}
+            units={units.map(({ id, name }) => ({ id, name }))}
+            canWrite={active.canWrite}
+          />
+        </SettingsSection>
 
-        <details id="warnregeln" open={params.section === "warnregeln"} className="group scroll-mt-32">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-900 shadow-sm [&::-webkit-details-marker]:hidden">
-            Warnregeln <ChevronDown className="size-4 text-stone-400 transition group-open:rotate-180" />
-          </summary>
-          <div className="pt-2">
-            <Card>
+        <SettingsSection
+          id="warnregeln"
+          title="Warnregeln"
+          open={params.section === "warnregeln"}
+        >
+          <Card>
               <CardHeader title="Regeln pro Kategorie" />
               {categories.length === 0 ? (
                 <p className="px-5 py-5 text-sm text-stone-500">Lege zuerst Kategorien an.</p>
@@ -281,23 +275,21 @@ export default async function SettingsPage({
                   })}
                 </ul>
               )}
-            </Card>
-          </div>
-        </details>
+          </Card>
+        </SettingsSection>
 
-        <details id="schnellfilter" open={params.section === "schnellfilter"} className="group scroll-mt-32">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-stone-900 shadow-sm [&::-webkit-details-marker]:hidden">
-            Schnellfilter <ChevronDown className="size-4 text-stone-400 transition group-open:rotate-180" />
-          </summary>
-          <div className="pt-2">
-            <QuickFilterManager
-              key={`quick-filters-${params.deleted ?? ""}-${params.error ?? ""}`}
-              canWrite={active.canWrite}
-              categories={categories.map(({ id, name }) => ({ id, name }))}
-              filters={quickFilters}
-            />
-          </div>
-        </details>
+        <SettingsSection
+          id="schnellfilter"
+          title="Schnellfilter"
+          open={params.section === "schnellfilter"}
+        >
+          <QuickFilterManager
+            key={`quick-filters-${params.deleted ?? ""}-${params.error ?? ""}`}
+            canWrite={active.canWrite}
+            categories={categories.map(({ id, name }) => ({ id, name }))}
+            filters={quickFilters}
+          />
+        </SettingsSection>
       </div>
     </div>
   );

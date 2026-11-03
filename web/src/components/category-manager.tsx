@@ -34,34 +34,34 @@ function CategoryEditRow({ category }: { category: CategoryRow }) {
       <div className="flex flex-wrap items-center gap-2">
         <form
           action={formAction}
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+          className="flex min-w-48 flex-1 flex-wrap items-center gap-2"
         >
           <input type="hidden" name="id" value={category.id} />
-          <div className="min-w-0 flex-1">
-            <input
-              name="name"
-              defaultValue={category.name}
-              maxLength={80}
-              className={inputClass}
-              aria-label={`Kategorie ${category.name} umbenennen`}
-            />
-          </div>
+          <input
+            name="name"
+            defaultValue={category.name}
+            maxLength={80}
+            className={`${inputClass} min-w-40 flex-1`}
+            aria-label={`Kategorie ${category.name} umbenennen`}
+          />
           <SubmitButton className={buttonGhost} pendingLabel="Speichert …">
             <Save className="size-3.5" /> Speichern
           </SubmitButton>
         </form>
-        <span className="w-20 text-right text-xs text-stone-500">
-          {category.itemCount} Artikel
-        </span>
-        <form action={deleteCategoryAction}>
-          <input type="hidden" name="id" value={category.id} />
-          <ConfirmSubmitButton
-            message={`Kategorie „${category.name}“ löschen? Alle Artikel werden nach „Allgemein“ verschoben.`}
-            className={buttonGhost}
-          >
-            <Trash2 className="size-3.5 text-red-600" /> Löschen
-          </ConfirmSubmitButton>
-        </form>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="whitespace-nowrap text-xs text-stone-500">
+            {category.itemCount} Artikel
+          </span>
+          <form action={deleteCategoryAction}>
+            <input type="hidden" name="id" value={category.id} />
+            <ConfirmSubmitButton
+              message={`Kategorie „${category.name}“ löschen? Alle Artikel werden nach „Allgemein“ verschoben.`}
+              className={buttonGhost}
+            >
+              <Trash2 className="size-3.5 text-red-600" /> Löschen
+            </ConfirmSubmitButton>
+          </form>
+        </div>
       </div>
       {state?.message ? (
         <p

@@ -23,7 +23,6 @@ import {
 export type LocationRow = {
   id: string;
   name: string;
-  sort_order: number;
   itemCount: number;
 };
 
@@ -35,7 +34,7 @@ function LocationEditRow({ location }: { location: LocationRow }) {
       <div className="flex flex-wrap items-center gap-2">
         <form
           action={formAction}
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+          className="flex min-w-48 flex-1 flex-wrap items-center gap-2"
         >
           <input type="hidden" name="id" value={location.id} />
           <input
@@ -45,30 +44,24 @@ function LocationEditRow({ location }: { location: LocationRow }) {
             className={`${inputClass} min-w-40 flex-1`}
             aria-label={`Lagerort ${location.name} umbenennen`}
           />
-          <input
-            name="sort_order"
-            type="number"
-            defaultValue={location.sort_order}
-            className={`${inputClass} w-20`}
-            aria-label={`Sortierung für ${location.name}`}
-            title="Sortierung"
-          />
           <SubmitButton className={buttonGhost} pendingLabel="Speichert …">
             <Save className="size-3.5" /> Speichern
           </SubmitButton>
         </form>
-        <span className="w-20 text-right text-xs text-stone-500">
-          {location.itemCount} Artikel
-        </span>
-        <form action={deleteLocationAction}>
-          <input type="hidden" name="id" value={location.id} />
-          <ConfirmSubmitButton
-            message={`Lagerort „${location.name}“ löschen? Alle Artikel werden nach „Sonstiges“ verschoben.`}
-            className={buttonGhost}
-          >
-            <Trash2 className="size-3.5 text-red-600" /> Löschen
-          </ConfirmSubmitButton>
-        </form>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="whitespace-nowrap text-xs text-stone-500">
+            {location.itemCount} Artikel
+          </span>
+          <form action={deleteLocationAction}>
+            <input type="hidden" name="id" value={location.id} />
+            <ConfirmSubmitButton
+              message={`Lagerort „${location.name}“ löschen? Alle Artikel werden nach „Sonstiges“ verschoben.`}
+              className={buttonGhost}
+            >
+              <Trash2 className="size-3.5 text-red-600" /> Löschen
+            </ConfirmSubmitButton>
+          </form>
+        </div>
       </div>
       {state?.message ? (
         <p
@@ -113,16 +106,6 @@ export function LocationManager({
                   required
                   maxLength={80}
                   placeholder="z. B. Kühlschrank"
-                  className={inputClass}
-                />
-              </div>
-              <div className="w-24">
-                <Label htmlFor="location-sort">Sortierung</Label>
-                <input
-                  id="location-sort"
-                  name="sort_order"
-                  type="number"
-                  defaultValue={0}
                   className={inputClass}
                 />
               </div>

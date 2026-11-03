@@ -1,16 +1,31 @@
 import { LogOut, Mail, ShieldCheck } from "lucide-react";
 
 import { signOutAction } from "@/actions/auth";
+import { AiKeyForm } from "@/components/ai-key-form";
 import { ProfileForm } from "@/components/profile-form";
 import { Badge, buttonSecondary, Card, CardHeader, PageHeader } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { getProfile, requireHousehold } from "@/lib/data";
+import { createClient } from "@/lib/supabase/server";
 import { roleLabel } from "@/lib/utils";
 
 export default async function ProfilePage() {
   const user = await requireUser();
   const { active } = await requireHousehold();
   const profile = await getProfile(user.id);
+  const supabase = await createClient();
+  const [personalKey, householdKey] = await Promise.all([
+    supabase
+      .from("user_ai_settings")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("households")
+      .select("gemini_api_key")
+      .eq("id", active.id)
+      .maybeSingle(),
+  ]);
 
   return (
     <div>
@@ -19,6 +34,10 @@ export default async function ProfilePage() {
         <ProfileForm
           displayName={profile?.display_name ?? ""}
           email={user.email ?? ""}
+        />
+        <AiKeyForm
+          hasPersonalKey={Boolean(personalKey.data?.user_id)}
+          hasHouseholdKey={Boolean(householdKey.data?.gemini_api_key)}
         />
         <Card>
           <CardHeader title="Konto" />

@@ -76,6 +76,9 @@ export function ItemCard({
   redirectTo,
   groupRow = false,
   onShoppingList = false,
+  selectable = false,
+  selected = false,
+  onSelectToggle,
 }: {
   item: ItemRow;
   photoUrl?: string | null;
@@ -83,6 +86,10 @@ export function ItemCard({
   redirectTo: string;
   groupRow?: boolean;
   onShoppingList?: boolean;
+  /** Im Batch-Modus: Checkbox vor der Karte anzeigen. */
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectToggle?: (id: string) => void;
 }) {
   const category = relationName(item.kitchen_categories);
   const location = relationName(item.kitchen_locations);
@@ -109,6 +116,16 @@ export function ItemCard({
     : onShoppingList
       ? "Bereits auf der Einkaufsliste"
       : "Nachkaufen";
+
+  const selectionBox = selectable ? (
+    <input
+      type="checkbox"
+      checked={selected}
+      onChange={() => onSelectToggle?.(item.id)}
+      aria-label={`${item.name} auswählen`}
+      className="size-4 shrink-0 cursor-pointer rounded border-stone-300 text-[var(--accent-700)] focus:ring-2 focus:ring-[var(--accent-500)]"
+    />
+  ) : null;
 
   // Bearbeiten ausschließlich über den Stift – der Kartenkörper ist kein Link.
   const actionButtons = canWrite ? (
@@ -180,6 +197,7 @@ export function ItemCard({
           {(toggle) => (
             <div className="flex flex-col gap-1.5">
               <div className="flex min-w-0 items-center gap-2">
+                {selectionBox}
                 <span
                   title={dateLabel ?? "Kein MHD oder Kaufdatum"}
                   className={cn(
@@ -232,6 +250,7 @@ export function ItemCard({
       <ItemNoteEditor itemId={item.id} notes={item.notes} canWrite={canWrite}>
         {(toggle) => (
           <div className="flex gap-2">
+            {selectionBox ? <span className="mt-1 flex shrink-0">{selectionBox}</span> : null}
             <ItemPhoto
               itemId={item.product_id ? undefined : item.id}
               productId={item.product_id ?? undefined}

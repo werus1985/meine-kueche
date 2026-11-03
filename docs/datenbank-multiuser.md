@@ -140,6 +140,7 @@ create table public.households (
   id uuid primary key default gen_random_uuid(),
   name text not null check (length(btrim(name)) between 1 and 80),
   external_lookup_enabled boolean not null default true,
+  gemini_api_key text,
   created_by uuid not null default auth.uid() references auth.users(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -149,6 +150,27 @@ create table public.households (
 `external_lookup_enabled` steuert, ob beim Anlegen unbekannter Barcodes eine
 externe Produktdatenbank (Open Food Facts) gefragt werden darf. Lokal
 bekannte Produkte werden nie extern gesucht.
+
+`gemini_api_key` ist der optionale **gemeinsame KI-Key** des Haushalts. Alle
+Mitglieder können ihn lesen und nutzen (bewusst geteilt), ändern dürfen ihn
+nur Eigentümer über die bestehende `manage_household`-Policy.
+
+#### `user_ai_settings`
+Persönlicher Gemini-API-Key pro Nutzer (Bring your own Key). Bewusst **nicht**
+in `profiles`, weil Haushaltsmitglieder die Profile gegenseitig lesen dürfen.
+Die Tabelle ist strikt selbst-gesperrt: Jeder sieht und ändert nur seine
+eigene Zeile.
+
+```sql
+create table public.user_ai_settings (
+  user_id        uuid primary key references auth.users(id) on delete cascade,
+  gemini_api_key text not null check (length(btrim(gemini_api_key)) between 10 and 200),
+  updated_at     timestamptz not null default now()
+);
+```
+
+Rangfolge bei einer KI-Anfrage: persönlicher Key → gemeinsamer Haushalts-Key →
+Hinweis in der Oberfläche. Einen serverweiten Fallback gibt es nicht.
 
 #### `household_roles`
 Zentrale Rechte-Definition. Damit ist „nur lesen, nicht schreiben“ ein Datenwert und keine Code-Änderung.
@@ -307,6 +329,55 @@ ist ausschließlich über die beiden Security-Definer-RPCs möglich, die die
 Invariante „keine aktiven Artikel“ selbst prüfen. Ein Haushalt kaskadiert
 weiterhin inklusive seiner Produkte.
 
+
+#### `kitchen_recipes`, `kitchen_recipe_ingredients`, `kitchen_recipe_steps`
+Rezepte pro Haushalt. Der Kopf enthält Titel, Beschreibung,
+**Basis-Portionen**, Quelle (`manual`, `chat`, `link`, `photo`), optionalen
+Quell-Link und Foto; Zutaten und Schritte hängen mit Reihenfolge kaskadierend
+am Rezept. Portionen werden in der Oberfläche nur skaliert – gespeichert
+bleibt die Basis-Portionszahl.
+
+```sql
+create table public.kitchen_recipes (
+  id           uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households(id) on delete cascade,
+  title        text not null check (length(btrim(title)) between 1 and 200),
+  description  text not null default '',
+  servings     integer not null default 4 check (servings between 1 and 100),
+  source       text not null default 'manual'
+    check (source in ('manual', 'chat', 'link', 'photo')),
+  source_url   text,
+  photo_path   text,
+  created_by   uuid default auth.uid() references auth.users(id) on delete set null,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  deleted_at   timestamptz,
+  unique (household_id, id)
+);
+
+create table public.kitchen_recipe_ingredients (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null,
+  recipe_id uuid not null,
+  name text not null check (length(btrim(name)) between 1 and 200),
+  qty numeric check (qty is null or qty > 0),
+  unit text,
+  optional boolean not null default false,
+  sort_order integer not null default 0,
+  foreign key (household_id, recipe_id)
+    references public.kitchen_recipes (household_id, id) on delete cascade
+);
+
+create table public.kitchen_recipe_steps (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null,
+  recipe_id uuid not null,
+  text text not null default '',
+  sort_order integer not null default 0,
+  foreign key (household_id, recipe_id)
+    references public.kitchen_recipes (household_id, id) on delete cascade
+);
+```
 
 #### `kitchen_items`
 Nur noch `household_id` als Mandant. Kategorien, Lagerorte und Einheiten als Foreign Keys statt freier Texte.

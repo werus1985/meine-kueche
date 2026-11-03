@@ -33,12 +33,13 @@ Mehrbenutzer-Schema.
    NEXT_PUBLIC_SUPABASE_URL=https://<projekt>.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
    NEXT_PUBLIC_SITE_URL=http://localhost:3000
-   GEMINI_API_KEY=<google-gemini-api-key>
    ```
 
-   `GEMINI_API_KEY` ist optional und nur für die KI-Küche unter `/ai`
-   nötig. Der Key bleibt serverseitig und wird nicht an den Browser
-   ausgeliefert.
+   Für die KI gibt es **keinen serverweiten Key** mehr: Jeder Nutzer
+   hinterlegt seinen eigenen Gemini-API-Key unter *Einstellungen → Profil*,
+   optional gibt es einen gemeinsamen Haushalts-Key unter
+   *Einstellungen → Haushalt*. Der Key wird serverseitig verwendet und nie
+   an den Browser ausgeliefert.
 
 3. Datenbank aufbauen (siehe unten).
 
@@ -83,11 +84,20 @@ Nach dem Push:
 - **Eine Ansicht, zwei Modi:** `/items` ist die Startseite. Ein großer
   geteilter Schalter („Vorräte | Einkauf“) wechselt zwischen den Modi; auf
   dem Handy zusätzlich per Wischgeste. Im Vorrat sind die Akzente grün, im
-  Einkauf wechseln sie auf Blau (Tab, +-Button, Filter, Notizen, Checkboxen).
-  Beim Wechsel bleiben aufgeklappte Gruppen, Notiz-Entwürfe und die
+  Einkauf wechseln sie auf Blau – inklusive Kopfzeile, Sidebar, KI- und
+  +-Button. Beim Wechsel bleiben aufgeklappte Gruppen, Notiz-Entwürfe und die
   Scrollposition erhalten (beide Listen bleiben gemountet).
 - **Sticky-Suche:** Suchfeld und Filter-Symbol schweben leicht transparent
   über der Liste und bleiben beim Scrollen sichtbar.
+- **Batch-Löschen im Vorrat:** Unten links schwebt eine Auswahl-Bubble
+  (Icon); ein Tipp blendet Checkboxen ein (Gruppenkopf wählt alle Artikel
+  der Gruppe, Zeilen einzeln). Sobald etwas ausgewählt ist, erscheint direkt
+  daneben eine rote Papierkorb-Bubble – nach Bestätigung werden alle
+  ausgewählten Artikel gelöscht.
+- **Einkaufsliste aufräumen:** „Liste leeren“ löscht die komplette Liste
+  (offen und erledigt, mit Bestätigung). Im Bereich „Erledigt“ steht neben
+  „In Vorrat übernehmen“ ein eigener **Löschen**-Button für abgehakte
+  Einträge.
 - **Filter-Popover:** Ohne Seitenwechsel – Sortierung (Haltbarkeit, Name,
   Zuletzt geändert), Lagerorte (Mehrfachauswahl), Kategorien
   (Mehrfachauswahl + „Auswahl umkehren“), Schnellfilter und Statusfilter.
@@ -183,16 +193,22 @@ Nach dem Push:
   - **Schalter:** „Externe Produktdatenbank nutzen“ unter
     *Einstellungen → Haushalt & Mitglieder*. Lokal bekannte Produkte werden
     nie extern gesucht.
-- **MHD per Sprache:** Neben dem MHD-Feld erlaubt ein Mikrofon-Button die
-  Spracheingabe kompletter Daten („fünfzehnter zehnter zweitausendsechs“ →
-  15.10.2026). Nutzt die Web Speech API und erkennt nur vollständige Daten.
-  Ein gesetztes MHD lässt sich über das ✕ neben dem Feld wieder entfernen –
-  sowohl beim Anlegen als auch beim Bearbeiten.
-  **Wichtig:** Mikrofon (und Kamera-Scan) benötigen einen sicheren Kontext –
-  `localhost` oder HTTPS. Auf dem iPhone über die LAN-IP daher
-  `npm run dev:https` verwenden und die selbstsignierte Zertifikatswarnung
-  einmal bestätigen; über reines `http://192.168.…` bleibt der Button sichtbar,
-  erklärt aber beim Antippen die HTTPS-Anforderung.
+- **MHD als Texteingabe:** Statt eines Kalenders ein freies Feld –
+  Trennzeichen sind optional und werden beim Tippen automatisch gesetzt
+  (`15102026` → 15.10.2026). Die ersten zwei Ziffern zählen als Tag, die
+  nächsten zwei als Monat, der Rest als Jahr; `1510` und `15.10.` ergänzen
+  das Jahr automatisch (aktuelles Jahr, sonst Folgejahr). Die Maske greift
+  nur beim Tippen einzelner Ziffern – diktierte oder selbst getippte Punkte
+  (`10.4.2020`) bleiben stehen und werden erst beim Verlassen normalisiert.
+  Auch diktierte Wortformen („fünfzehnter zehnter zweitausendsechsundzwanzig“)
+  und eingefügte ISO-Daten werden erkannt;
+  gültige Eingaben werden beim Verlassen als TT.MM.JJJJ formatiert,
+  Ungültiges wird mit Hinweis abgelehnt (auch serverseitig). Ein gesetztes
+  MHD lässt sich über das ✕ neben dem Feld wieder entfernen – sowohl beim
+  Anlegen als auch beim Bearbeiten.
+  **Wichtig:** Der Kamera-Scan benötigt einen sicheren Kontext – `localhost`
+  oder HTTPS. Auf dem iPhone über die LAN-IP daher `npm run dev:https`
+  verwenden und die selbstsignierte Zertifikatswarnung einmal bestätigen.
 - **Kaufdatum:** default „Heute“, Schnelleingabe per „Heute“-Chip und
   ±-Tag-Buttons, Anzeige immer relativ („Heute“, „Vor x Tagen“,
   „In x Tagen“ – bewusst ohne „Gestern“).
@@ -224,9 +240,20 @@ Nach dem Push:
 - **Kategorien direkt im Artikelformular** anlegen und sofort auswählen.
 - **Schnellfilter:** Mehrfach-Kategorieauswahl als Filter speichern und in
   der Filter-Leiste wieder aufrufen; Verwaltung in den Stammdaten.
-- **KI-Küche:** Rezepte aus dem Vorrat (inkl. MHD), Chat zu Vorrat und
-  Einkauf, Einkaufslisten-Vorschläge sowie Übernahme fehlender Zutaten
-  (`/ai`, benötigt `GEMINI_API_KEY`).
+- **KI-Küche als Chat-Overlay:** Das KI-Icon in der Kopfzeile öffnet einen
+  Chat über jeder Seite (mobil Bottom-Sheet, Desktop-Drawer). Fragen zu
+  Rezepten, fehlenden Zutaten, Produktwissen und Einkaufslisten; fehlende
+  Zutaten lassen sich direkt in den Einkauf übernehmen. Der Pfeil blendet
+  den Chat aus (Verlauf bleibt) – wieder geöffnet wird er über den
+  KI-Button in Kopfzeile/Sidebar; ✕ beendet ihn (Verlauf wird geleert).
+- **Eigene KI-Keys:** Jeder Nutzer hinterlegt seinen Gemini-API-Key unter
+  *Einstellungen → Profil* (privat, nur für ihn sichtbar). Optional kann ein
+  Eigentümer einen gemeinsamen Haushalts-Key hinterlegen, der für Mitglieder
+  ohne eigenen Key greift.
+- **Rezepte-Tab:** Rezepte aus dem Chat speichern oder selbst anlegen
+  (Titel, Portionen, Zutaten, Schritte, Foto, Quell-Link), bearbeiten und
+  löschen. Die Portionen lassen sich in der Ansicht stufenlos umrechnen –
+  die Zutatenmengen skalieren live, das Rezept bleibt unverändert.
 - **Lösch-Auffangbecken:** Kategorien → „Allgemein“, Lagerorte →
   „Sonstiges“, Einheiten → „Stück“ (über RPCs; verknüpfte Artikel werden
   über die Produkt-Trigger mitgezogen).
@@ -240,7 +267,10 @@ Nach dem Push:
 | `/items/new`, `/items/[id]/edit` | Anlegen/Bearbeiten (im App-Kontext als Modal, direkt aufgerufen als Vollseite) |
 | `/shopping` | Weiterleitung auf `/items?kind=shop` |
 | `/scan` | Weiterleitung auf `/items` (Scannen passiert in Suche und Formular) |
-| `/ai` | KI-Küche: Rezepte, Chat und Einkaufslisten-Vorschläge |
+| `/recipes` | Rezepte: Liste, Detail, Anlegen/Bearbeiten |
+| `/recipes/new`, `/recipes/[id]/edit` | Rezept anlegen/bearbeiten |
+| `/recipes/[id]` | Rezeptdetail mit Portionen-Skalierung |
+| `/ai` | Weiterleitung auf `/items` (der KI-Chat ist ein Overlay) |
 | `/settings` | Stammdaten in einer Seite: Kategorien, Lagerorte, Einheiten, Produktgruppen, Warnregeln, Schnellfilter |
 | `/settings/household` | Haushalte, Einladungen und Mitglieder (inkl. `#mitglieder`) |
 | `/settings/profile` | Profil, Rolle, Abmelden |
@@ -265,8 +295,10 @@ Nach dem Push:
 - **Instant-Filter:** `/items` lädt alle Artikel einmal serverseitig;
   `inventory-workspace.tsx` filtert/sortiert clientseitig und synchronisiert
   die URL per `history.replaceState`.
-- **Spracheingabe:** Web Speech API (`de-DE`) in `expiry-date-field.tsx`;
-  erkennt nur vollständige Daten, keine relativen Formulierungen.
+- **MHD-Eingabe:** `lib/date-input.ts` parst Ziffernfolgen (4/6/8 Stellen),
+  deutsche Schreibweisen, ISO-Daten und diktierte Wortformen; das Feld
+  `expiry-date-field.tsx` setzt die Punkte automatisch und normalisiert beim
+  Verlassen. Die Server Action nutzt denselben Parser.
 - Fotos im privaten Bucket `product-photos`, Pfad
   `{household_id}/{item_id_oder_product_id}/{datei}.jpg`. Auslieferung über
   die same-origin Route `/api/photos/...` (kein Mixed Content, wenn die App
@@ -276,7 +308,7 @@ Nach dem Push:
 
 ```bash
 npm run dev        # Entwicklung (HTTP)
-npm run dev:https  # Entwicklung über HTTPS (nötig für Mikrofon/Kamera auf dem iPhone)
+npm run dev:https  # Entwicklung über HTTPS (nötig für den Kamera-Scan auf dem iPhone)
 npm run build      # Produktionsbuild
 npm run start      # Produktionsserver
 npm run lint       # ESLint
@@ -284,6 +316,10 @@ npm run lint       # ESLint
 
 Für `dev:https` liegen selbstsignierte Zertifikate unter `certificates/`
 (gitignored). Auf dem iPhone einmalig „Details → Website besuchen“ wählen.
+Das Skript übergibt das Zertifikat zusätzlich als `--experimental-https-ca`:
+Damit vertraut der Dev-Server seinem eigenen Zertifikat und interne Fetchs
+(Server Actions mit `redirect()`) laufen ohne TLS-Fehler – sonst kostet jeder
+Redirect eine fehlgeschlagene Anfrage und eine zusätzliche Runde im Browser.
 Nach einem WLAN-IP-Wechsel Zertifikat neu erzeugen:
 
 ```bash

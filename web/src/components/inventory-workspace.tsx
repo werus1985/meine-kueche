@@ -3,14 +3,32 @@
 import Link from "next/link";
 import {
   CheckCircle2,
+  ListChecks,
+  Loader2,
   Package,
   Plus,
   ShoppingCart,
+  Trash2,
+  X,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 
-import { moveCheckedToStockAction } from "@/actions/items";
+import {
+  clearShoppingListAction,
+  deleteCheckedShoppingAction,
+  deleteItemsAction,
+  moveCheckedToStockAction,
+} from "@/actions/items";
+import { ConfirmSubmitButton } from "@/components/confirm-button";
 import { ItemCard, type ItemRow } from "@/components/item-card";
 import { ProductGroupCard } from "@/components/product-group-card";
 import { StockFilterPanel } from "@/components/stock-filter-panel";
@@ -122,6 +140,21 @@ export function InventoryWorkspace({
   // Liste tatsächlich gerendert ist (siehe Effekt unten).
   const pendingScroll = useRef<number | null>(null);
 
+  // Batch-Auswahl im Vorrat.
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [deletePending, startDelete] = useTransition();
+
+  // Akzentfarbe (grün/blau) gilt für die ganze Oberfläche, damit auch
+  // Kopfzeile, Sidebar und KI-Button im Einkaufs-Tab blau werden.
+  useIsomorphicLayoutEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("accent-shop", kind === "shop");
+    return () => {
+      root.classList.remove("accent-shop");
+    };
+  }, [kind]);
+
   // Scroll-Position erst nach dem Rendern der neuen Liste wiederherstellen –
   // ein requestAnimationFrame lief bisher vor dem React-Commit und wurde vom
   // Router-Refresh teils überschrieben.
@@ -131,6 +164,15 @@ export function InventoryWorkspace({
     pendingScroll.current = null;
     window.scrollTo(0, top);
   }, [kind]);
+
+  // Tab-Wechsel (auch per Zurück-Button) beendet den Auswahlmodus. State
+  // während des Renderns anzupassen ist hier das von React empfohlene Muster.
+  const [lastKind, setLastKind] = useState<Kind>(kind);
+  if (kind !== lastKind) {
+    setLastKind(kind);
+    setSelecting(false);
+    setSelected(new Set());
+  }
 
   const categoryParam = searchParams.get("category");
   const categoryIds = useMemo(
@@ -325,7 +367,7 @@ export function InventoryWorkspace({
   }).length;
   const returnParams = new URLSearchParams(searchParams.toString());
   returnParams.set("kind", kind);
-  for (const key of ["created", "updated", "product", "moved", "error", "from"]) {
+  for (const key of ["created", "updated", "product", "moved", "deleted", "cleared", "error", "from"]) {
     returnParams.delete(key);
   }
   const returnHash = kind === "shop" ? "#einkauf" : "#vorrat";
@@ -334,15 +376,61 @@ export function InventoryWorkspace({
     barcodeToPrefill ? `&barcode=${encodeURIComponent(barcodeToPrefill)}` : ""
   }`;
 
+  function toggleSelectMode() {
+    setSelected(new Set());
+    setSelecting((current) => !current);
+  }
+
+  function toggleSelected(id: string) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleMany(ids: string[], on: boolean) {
+    setSelected((current) => {
+      const next = new Set(current);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }
+
+  function selectAllVisible() {
+    setSelected(new Set(filteredStock.map((item) => item.id)));
+  }
+
+  function clearSelection() {
+    setSelected(new Set());
+  }
+
+  function deleteSelected() {
+    const ids = [...selected];
+    if (ids.length === 0 || deletePending) return;
+    const label = ids.length === 1 ? "1 Artikel" : `${ids.length} Artikel`;
+    if (!window.confirm(`${label} wirklich löschen?`)) return;
+    setSelected(new Set());
+    startDelete(async () => {
+      await deleteItemsAction(ids);
+    });
+  }
+
   function switchTo(next: Kind) {
     if (next === kind) return;
+    setSelecting(false);
+    setSelected(new Set());
     scrollPositions.current[kind] = window.scrollY;
     pendingScroll.current = scrollPositions.current[next];
     const params = new URLSearchParams(searchParams.toString());
     params.set("kind", next);
     params.delete("expired");
     params.delete("expiring");
-    for (const key of ["created", "updated", "product", "moved", "error"]) {
+    for (const key of ["created", "updated", "product", "moved", "deleted", "cleared", "error"]) {
       params.delete(key);
     }
     setUrlParams(params, next === "shop" ? "#einkauf" : "#vorrat");
@@ -473,6 +561,26 @@ export function InventoryWorkspace({
         </div>
       ) : null}
 
+      {kind === "stock" && selecting ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--accent-200)] bg-[var(--accent-50)] px-3 py-2 text-xs text-[var(--accent-900)]">
+          <span className="font-semibold">{selected.size} ausgewählt</span>
+          <button
+            type="button"
+            onClick={selectAllVisible}
+            className="font-medium underline-offset-2 hover:underline"
+          >
+            Alle ({filteredStock.length})
+          </button>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="font-medium underline-offset-2 hover:underline"
+          >
+            Keine
+          </button>
+        </div>
+      ) : null}
+
       <section
         id={kind === "stock" ? "vorrat" : "einkauf"}
         className="scroll-mt-36 pb-32"
@@ -512,6 +620,9 @@ export function InventoryWorkspace({
                     canWrite={canWrite}
                     redirectTo={returnTo}
                     onShoppingList={stockOnShoppingList.has(entry.item.id)}
+                    selectable={selecting}
+                    selected={selected.has(entry.item.id)}
+                    onSelectToggle={toggleSelected}
                   />
                 ) : (
                   <ProductGroupCard
@@ -524,6 +635,10 @@ export function InventoryWorkspace({
                     canWrite={canWrite}
                     redirectTo={returnTo}
                     shoppingItemIds={stockOnShoppingList}
+                    selectable={selecting}
+                    selectedIds={selected}
+                    onToggleItem={toggleSelected}
+                    onToggleMany={toggleMany}
                   />
                 ),
               )}
@@ -533,11 +648,25 @@ export function InventoryWorkspace({
 
         <div className={cn(kind !== "shop" && "hidden")}>
           <div>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="text-base font-semibold text-stone-900">Offen</h2>
-              <span className="text-xs text-stone-500">
-                {openShopping.length} {openShopping.length === 1 ? "Eintrag" : "Einträge"}
-              </span>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-baseline gap-2">
+                <h2 className="text-base font-semibold text-stone-900">Offen</h2>
+                <span className="text-xs text-stone-500">
+                  {openShopping.length} {openShopping.length === 1 ? "Eintrag" : "Einträge"}
+                </span>
+              </div>
+              {canWrite && shopItems.length > 0 ? (
+                <form action={clearShoppingListAction}>
+                  <ConfirmSubmitButton
+                    message={`Einkaufsliste wirklich leeren? ${shopItems.length} ${shopItems.length === 1 ? "Eintrag wird" : "Einträge werden"} gelöscht (offene und erledigte).`}
+                    ariaLabel="Einkaufsliste leeren"
+                    title="Einkaufsliste leeren"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 shadow-sm transition hover:bg-red-50"
+                  >
+                    <Trash2 className="size-3.5" /> Liste leeren
+                  </ConfirmSubmitButton>
+                </form>
+              ) : null}
             </div>
             {openShopping.length === 0 ? (
               <Card className="mb-3">
@@ -568,11 +697,23 @@ export function InventoryWorkspace({
                   description={`${doneShopping.length} abgehakt`}
                   action={
                     canWrite ? (
-                      <form action={moveCheckedToStockAction}>
-                        <button type="submit" className={buttonPrimary}>
-                          <Package className="size-4" /> In Vorrat übernehmen
-                        </button>
-                      </form>
+                      <div className="flex flex-wrap gap-2">
+                        <form action={moveCheckedToStockAction}>
+                          <button type="submit" className={buttonPrimary}>
+                            <Package className="size-4" /> In Vorrat übernehmen
+                          </button>
+                        </form>
+                        <form action={deleteCheckedShoppingAction}>
+                          <ConfirmSubmitButton
+                            message={`${doneShopping.length} ${doneShopping.length === 1 ? "erledigten Eintrag" : "erledigte Einträge"} wirklich löschen?`}
+                            ariaLabel="Erledigte Einträge löschen"
+                            title="Erledigte Einträge löschen"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 shadow-sm transition hover:bg-red-50"
+                          >
+                            <Trash2 className="size-4" /> Löschen
+                          </ConfirmSubmitButton>
+                        </form>
+                      </div>
                     ) : null
                   }
                 />
@@ -596,6 +737,47 @@ export function InventoryWorkspace({
           </div>
         </div>
       </section>
+
+      {kind === "stock" && canWrite && stockItems.length > 0 ? (
+        <div className="fixed bottom-[calc(1.25rem_+_env(safe-area-inset-bottom))] left-[calc(1rem_+_env(safe-area-inset-left))] z-40 flex items-center gap-2 sm:bottom-6 sm:left-6">
+          <button
+            type="button"
+            onClick={toggleSelectMode}
+            aria-pressed={selecting}
+            aria-label={selecting ? "Auswahl beenden" : "Artikel auswählen"}
+            title={selecting ? "Auswahl beenden" : "Artikel auswählen"}
+            className={cn(
+              "inline-flex size-14 items-center justify-center rounded-full shadow-lg shadow-stone-950/20 transition focus:outline-none focus:ring-2 focus:ring-offset-2",
+              selecting
+                ? "bg-stone-800 text-white hover:bg-stone-900 focus:ring-stone-500"
+                : "bg-[var(--accent-700)] text-white hover:bg-[var(--accent-800)] focus:ring-[var(--accent-500)]",
+            )}
+          >
+            {selecting ? (
+              <X className="size-6" />
+            ) : (
+              <ListChecks className="size-6" />
+            )}
+          </button>
+
+          {selecting && selected.size > 0 ? (
+            <button
+              type="button"
+              onClick={deleteSelected}
+              disabled={deletePending}
+              aria-label={`${selected.size} ausgewählte Artikel löschen`}
+              title={`${selected.size} ausgewählte Artikel löschen`}
+              className="inline-flex size-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg shadow-stone-950/25 transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-60"
+            >
+              {deletePending ? (
+                <Loader2 className="size-6 animate-spin" />
+              ) : (
+                <Trash2 className="size-6" />
+              )}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <Link
         href={newItemHref}

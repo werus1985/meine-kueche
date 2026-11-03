@@ -187,14 +187,12 @@ export async function createLocationAction(
   }
 
   const name = String(formData.get("name") ?? "").trim();
-  const sortOrder = Number(formData.get("sort_order") ?? 0) || 0;
   if (!name) return { ok: false, message: "Bitte einen Namen eingeben." };
 
   const supabase = await createClient();
   const { error } = await supabase.from("kitchen_locations").insert({
     household_id: context.active.id,
     name,
-    sort_order: sortOrder,
   });
 
   if (error) {
@@ -217,7 +215,6 @@ export async function renameLocationAction(
 
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
-  const sortOrder = Number(formData.get("sort_order") ?? 0) || 0;
   if (!id || !name) {
     return { ok: false, message: "Bitte einen Namen eingeben." };
   }
@@ -225,7 +222,7 @@ export async function renameLocationAction(
   const supabase = await createClient();
   const { error } = await supabase
     .from("kitchen_locations")
-    .update({ name, sort_order: sortOrder })
+    .update({ name })
     .eq("id", id)
     .eq("household_id", context.active.id);
 
@@ -653,4 +650,99 @@ export async function deleteProductGroupAction(formData: FormData): Promise<void
   await removePhoto(photoPath);
   revalidatePath("/", "layout");
   redirect("/settings?section=produktgruppen");
+}
+
+/* -------------------------------------------------------------------------- */
+/* KI-Zugänge (Gemini-Keys)                                                   */
+/* -------------------------------------------------------------------------- */
+
+function normalizeGeminiKey(value: FormDataEntryValue | null) {
+  return String(value ?? "").replace(/\s+/g, "").trim();
+}
+
+const GEMINI_KEY_HINT =
+  "Der Gemini-API-Key sieht ungültig aus (10–200 Zeichen, keine Leerzeichen).";
+
+export async function saveUserGeminiKeyAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const key = normalizeGeminiKey(formData.get("gemini_api_key"));
+  if (key.length < 10 || key.length > 200) {
+    return { ok: false, message: GEMINI_KEY_HINT };
+  }
+
+  const { error } = await supabase.from("user_ai_settings").upsert(
+    {
+      user_id: user.id,
+      gemini_api_key: key,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Persönlicher Gemini-Key wurde gespeichert." };
+}
+
+export async function removeUserGeminiKeyAction(): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  await supabase.from("user_ai_settings").delete().eq("user_id", user.id);
+  revalidatePath("/", "layout");
+}
+
+export async function saveHouseholdGeminiKeyAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const context = await getActiveHousehold();
+  if (!context) return { ok: false, message: "Kein Haushalt ausgewählt." };
+  if (!context.active.canManageHousehold) {
+    return {
+      ok: false,
+      message: "Nur Eigentümer dürfen den gemeinsamen KI-Key ändern.",
+    };
+  }
+
+  const key = normalizeGeminiKey(formData.get("gemini_api_key"));
+  if (key.length < 10 || key.length > 200) {
+    return { ok: false, message: GEMINI_KEY_HINT };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("households")
+    .update({ gemini_api_key: key })
+    .eq("id", context.active.id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Gemeinsamer Gemini-Key wurde gespeichert." };
+}
+
+export async function removeHouseholdGeminiKeyAction(): Promise<void> {
+  const context = await getActiveHousehold();
+  if (!context) redirect("/onboarding");
+  if (!context.active.canManageHousehold) {
+    redirect("/settings/household?error=keine-berechtigung");
+  }
+
+  const supabase = await createClient();
+  await supabase
+    .from("households")
+    .update({ gemini_api_key: null })
+    .eq("id", context.active.id);
+  revalidatePath("/", "layout");
 }

@@ -58,6 +58,10 @@ export function ProductGroupCard({
   canWrite,
   redirectTo,
   shoppingItemIds,
+  selectable = false,
+  selectedIds,
+  onToggleItem,
+  onToggleMany,
 }: {
   product: KitchenProduct;
   items: ItemRow[];
@@ -67,6 +71,11 @@ export function ProductGroupCard({
   canWrite: boolean;
   redirectTo: string;
   shoppingItemIds?: ReadonlySet<string>;
+  /** Im Batch-Modus: Checkboxen für Gruppe und Zeilen anzeigen. */
+  selectable?: boolean;
+  selectedIds?: ReadonlySet<string>;
+  onToggleItem?: (id: string) => void;
+  onToggleMany?: (ids: string[], selected: boolean) => void;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
@@ -90,6 +99,10 @@ export function ProductGroupCard({
     return days !== null && days >= 0 && days <= 7;
   }).length;
   const editHref = `/items/${items[0].id}/edit?from=${encodeURIComponent(redirectTo)}&group=1`;
+  const selectedCount = selectedIds
+    ? items.filter((item) => selectedIds.has(item.id)).length
+    : 0;
+  const allSelected = items.length > 0 && selectedCount === items.length;
 
   return (
     <div className="min-w-0 rounded-xl border border-stone-200 bg-white shadow-sm transition hover:border-stone-300">
@@ -103,6 +116,27 @@ export function ProductGroupCard({
         {/* Die gesamte Kopffläche klappt auf/zu – ein einziges großes
             Touch-Target. Der Chevron ist nur Indikator. */}
         <summary className="flex min-h-[72px] cursor-pointer list-none items-start gap-2 p-2 [&::-webkit-details-marker]:hidden">
+          {selectable ? (
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(element) => {
+                if (element) {
+                  element.indeterminate = selectedCount > 0 && !allSelected;
+                }
+              }}
+              onChange={(event) =>
+                onToggleMany?.(
+                  items.map((item) => item.id),
+                  event.target.checked,
+                )
+              }
+              onClick={(event) => event.stopPropagation()}
+              aria-label={`${product.name}: alle Artikel auswählen`}
+              title="Alle Artikel der Gruppe auswählen"
+              className="mt-4 size-4 shrink-0 cursor-pointer rounded border-stone-300 text-[var(--accent-700)] focus:ring-2 focus:ring-[var(--accent-500)]"
+            />
+          ) : null}
           <ItemPhoto
             productId={product.id}
             photoUrl={photoUrl}
@@ -187,6 +221,9 @@ export function ProductGroupCard({
               redirectTo={redirectTo}
               groupRow
               onShoppingList={shoppingItemIds?.has(item.id) ?? false}
+              selectable={selectable}
+              selected={selectedIds?.has(item.id) ?? false}
+              onSelectToggle={onToggleItem}
             />
           ))}
         </div>

@@ -6,6 +6,36 @@ export type FormState = {
 
 export type RoleKey = "owner" | "editor" | "viewer";
 
+export type RecipeIngredient = {
+  name: string;
+  qty: number | null;
+  unit: string | null;
+  optional: boolean;
+};
+
+export type RecipeStep = {
+  text: string;
+};
+
+export type Recipe = {
+  id: string;
+  household_id: string;
+  title: string;
+  description: string;
+  servings: number;
+  source: "manual" | "chat" | "link" | "photo";
+  source_url: string | null;
+  photo_path: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecipeWithDetails = Recipe & {
+  ingredients: RecipeIngredient[];
+  steps: RecipeStep[];
+  photoUrl?: string | null;
+};
+
 export type HouseholdSummary = {
   id: string;
   name: string;

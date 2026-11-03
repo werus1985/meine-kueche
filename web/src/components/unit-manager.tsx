@@ -35,14 +35,14 @@ function UnitEditRow({ unit }: { unit: UnitRow }) {
       <div className="flex flex-wrap items-center gap-2">
         <form
           action={formAction}
-          className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+          className="flex min-w-48 flex-1 flex-wrap items-center gap-2"
         >
           <input type="hidden" name="id" value={unit.id} />
           <input
             name="name"
             defaultValue={unit.name}
             maxLength={40}
-            className={`${inputClass} min-w-32 flex-1`}
+            className={`${inputClass} min-w-40 flex-1`}
             aria-label={`Einheit ${unit.name} umbenennen`}
           />
           <div className="flex items-center gap-1">
@@ -62,18 +62,20 @@ function UnitEditRow({ unit }: { unit: UnitRow }) {
             <Save className="size-3.5" /> Speichern
           </SubmitButton>
         </form>
-        <span className="w-20 text-right text-xs text-stone-500">
-          {unit.itemCount} Artikel
-        </span>
-        <form action={deleteUnitAction}>
-          <input type="hidden" name="id" value={unit.id} />
-          <ConfirmSubmitButton
-            message={`Einheit „${unit.name}“ löschen? Alle Artikel werden auf „Stück“ umgestellt.`}
-            className={buttonGhost}
-          >
-            <Trash2 className="size-3.5 text-red-600" /> Löschen
-          </ConfirmSubmitButton>
-        </form>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="whitespace-nowrap text-xs text-stone-500">
+            {unit.itemCount} Artikel
+          </span>
+          <form action={deleteUnitAction}>
+            <input type="hidden" name="id" value={unit.id} />
+            <ConfirmSubmitButton
+              message={`Einheit „${unit.name}“ löschen? Alle Artikel werden auf „Stück“ umgestellt.`}
+              className={buttonGhost}
+            >
+              <Trash2 className="size-3.5 text-red-600" /> Löschen
+            </ConfirmSubmitButton>
+          </form>
+        </div>
       </div>
       {state?.message ? (
         <p
