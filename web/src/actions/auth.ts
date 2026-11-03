@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -74,8 +73,8 @@ export async function signUpAction(
     return { ok: false, message: "Die Passwörter stimmen nicht überein." };
   }
 
-  const headerStore = await headers();
-  const origin = headerStore.get("origin") ?? SITE_URL;
+  // Feste Site-URL statt Request-Origin: der Origin-Header ist fälschbar.
+  const origin = SITE_URL;
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({

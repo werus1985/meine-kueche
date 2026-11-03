@@ -35,6 +35,7 @@ import {
   selectClass,
   textareaClass,
 } from "@/components/ui";
+import { compressImageFile, replaceFileInput } from "@/lib/image";
 import type { KitchenProduct } from "@/lib/types";
 import { cn, normalizeBarcode } from "@/lib/utils";
 
@@ -447,6 +448,13 @@ export function ItemForm({
             type="file"
             accept="image/jpeg,image/png,image/webp"
             capture="environment"
+            onChange={async (event) => {
+              const input = event.currentTarget;
+              const file = input.files?.[0];
+              if (!file) return;
+              const compressed = await compressImageFile(file);
+              if (compressed !== file) replaceFileInput(input, compressed);
+            }}
             className="block w-full text-sm text-stone-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-emerald-800 hover:file:bg-emerald-100"
           />
           {lookup?.photoUrl ? (

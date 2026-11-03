@@ -304,6 +304,24 @@ Nach dem Push:
   die same-origin Route `/api/photos/...` (kein Mixed Content, wenn die App
   über HTTPS läuft); Altpfade `{user_id}/…` bleiben für den Eigentümer lesbar.
 
+## Sicherheit & Hosting
+
+- **Header/CSP:** `next.config.ts` setzt CSP, HSTS (nur Produktion),
+  `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` und
+  `Permissions-Policy`; `X-Powered-By` ist abgeschaltet. Die CSP erlaubt
+  Supabase (HTTP + WebSocket) und Open-Food-Facts-Bilder, sonst nur eigene
+  Quellen.
+- **Session-Cookies:** `secure` ist in Produktion aktiv (HTTPS nötig),
+  `sameSite=lax`, `httpOnly=false` (Supabase-Browser-Client).
+- **Uploads:** Fotos werden im Browser auf max. 4 MB verkleinert
+  (`lib/image.ts`, Canvas/JPEG) – passt unter das 4,5-MB-Limit von Vercel.
+  Serverseitig gilt dasselbe Limit (`MAX_PHOTO_BYTES`).
+- **KI:** Gemini hat 15 s pro Versuch und 25 s Gesamtbudget; der App-Bereich
+  setzt `maxDuration = 60` (Vercel-Hobby-Maximum).
+- **Suchmaschinen:** `public/robots.txt` sperrt alles (`Disallow: /`).
+- **Produktion:** `NEXT_PUBLIC_SITE_URL` auf die echte Domain setzen; sie
+  wird für Bestätigungs-/Reset-Links verwendet.
+
 ## Skripte
 
 ```bash

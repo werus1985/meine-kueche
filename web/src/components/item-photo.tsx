@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { uploadItemPhotoAction } from "@/actions/items";
+import { compressImageFile } from "@/lib/image";
 import { cn } from "@/lib/utils";
 
 export function PhotoLightbox({
@@ -89,16 +90,17 @@ export function ItemPhoto({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function onFileChange(event: ChangeEvent<HTMLInputElement>) {
+  async function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     // Erlaubt, dieselbe Datei nach einem Fehler erneut zu wählen.
     event.target.value = "";
     if (!file) return;
 
+    const compressed = await compressImageFile(file);
     const formData = new FormData();
     if (productId) formData.set("productId", productId);
     if (itemId) formData.set("itemId", itemId);
-    formData.set("photo", file);
+    formData.set("photo", compressed);
 
     setError(null);
     startTransition(async () => {

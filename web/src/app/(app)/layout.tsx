@@ -9,6 +9,10 @@ import { getActiveHousehold, getProfile } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { daysUntil } from "@/lib/utils";
 
+// KI-Anfragen (Gemini) brauchen auf Vercel mehr als die Standard-Laufzeit;
+// 60 s ist das Maximum im Hobby-Plan.
+export const maxDuration = 60;
+
 export default async function AppLayout({
   children,
   modal,

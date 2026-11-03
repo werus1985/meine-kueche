@@ -15,6 +15,7 @@ import {
   Label,
   textareaClass,
 } from "@/components/ui";
+import { compressImageFile, replaceFileInput } from "@/lib/image";
 import type { RecipeIngredient, RecipeStep } from "@/lib/types";
 
 type IngredientRow = {
@@ -313,12 +314,14 @@ export function RecipeForm({
               type="file"
               accept="image/jpeg,image/png,image/webp"
               capture="environment"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) {
-                  setRemovePhoto(false);
-                  setPhotoPreview(URL.createObjectURL(file));
-                }
+              onChange={async (event) => {
+                const input = event.currentTarget;
+                const file = input.files?.[0];
+                if (!file) return;
+                setRemovePhoto(false);
+                const compressed = await compressImageFile(file);
+                if (compressed !== file) replaceFileInput(input, compressed);
+                setPhotoPreview(URL.createObjectURL(compressed));
               }}
               className="block w-full text-sm text-stone-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-emerald-800 hover:file:bg-emerald-100"
             />

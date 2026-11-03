@@ -17,7 +17,9 @@ const GEMINI_MODELS = [
 ];
 
 // Gemini antwortet unter Last teils erst nach 20–35 Sekunden.
-const GEMINI_TIMEOUT_MS = 45_000;
+const GEMINI_TIMEOUT_MS = 15_000;
+// Harte Obergrenze für die gesamte Modellkette (Vercel Hobby: 60 s Laufzeit).
+const GEMINI_TOTAL_BUDGET_MS = 25_000;
 
 // Zuletzt erfolgreiches Modell bevorzugen, damit nicht bei jeder Anfrage
 // erneut überlastete Modelle probiert werden.
@@ -64,9 +66,11 @@ export async function callGemini(
   let lastStatus = 503;
   let lastMessage =
     "Alle verfügbaren Gemini-Modelle sind momentan nicht erreichbar.";
+  const deadline = Date.now() + GEMINI_TOTAL_BUDGET_MS;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     for (const model of orderedModels()) {
+    if (Date.now() >= deadline) break;
     let response: Response;
     try {
       response = await fetch(`${GEMINI_BASE_URL}/${model}:generateContent`, {
@@ -79,7 +83,9 @@ export async function callGemini(
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig,
         }),
-        signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+        signal: AbortSignal.timeout(
+          Math.max(1_000, Math.min(GEMINI_TIMEOUT_MS, deadline - Date.now())),
+        ),
       });
     } catch (cause) {
       console.error(`Gemini-Netzwerkfehler bei ${model}:`, String(cause));
@@ -155,10 +161,12 @@ export async function callGemini(
     };
   }
 
-    if (attempt === 0) {
+    if (attempt === 0 && Date.now() < deadline) {
       // Kurz warten und die Kette einmal wiederholen – die 503er sind oft
       // nur kurze Lastspitzen.
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(2000, Math.max(0, deadline - Date.now()))),
+      );
     }
   }
 

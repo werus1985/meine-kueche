@@ -3,7 +3,8 @@ import "server-only";
 import { isAllowedExternalPhotoUrl } from "@/lib/barcode-lookup";
 import { createClient } from "@/lib/supabase/server";
 
-export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+// Vercel begrenzt Request-Bodies auf 4,5 MB; der Client verkleinert vorher.
+export const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
 export const ALLOWED_PHOTO_TYPES = new Set([
   "image/jpeg",
   "image/png",
