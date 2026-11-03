@@ -1,0 +1,57 @@
+name: Datenbank-Backup
+
+# Nächtlicher pg_dump nach Backblaze B2 (oder S3-kompatibel).
+# Läuft nur, wenn die Secrets im Repository hinterlegt sind:
+#   SUPABASE_DB_URL   – Postgres-Verbindung (Supabase: Connect → Session Pooler)
+#   B2_ENDPOINT       – z. B. https://s3.eu-central-003.backblazeb2.com
+#   B2_BUCKET         – Bucket-Name
+#   B2_KEY_ID / B2_APP_KEY – Schlüssel mit Schreibrechten auf den Bucket
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prüfen, ob Backup konfiguriert ist
+        id: check
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "Kein SUPABASE_DB_URL hinterlegt – Backup übersprungen."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dump erzeugen
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          FILE="meine-kueche-$(date +%F).dump"
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --format=custom --file="$FILE"
+          ls -lh "$FILE"
+          echo "FILE=$FILE" >> "$GITHUB_ENV"
+
+      - name: Nach B2 hochladen
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          B2_ENDPOINT: ${{ secrets.B2_ENDPOINT }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+        run: |
+          set -euo pipefail
+          aws --endpoint-url "$B2_ENDPOINT" s3 cp "$FILE" "s3://$B2_BUCKET/$FILE"
+          echo "Backup hochgeladen: $FILE"
+
+      - name: Alte Backups lokal aufräumen
+        if: always()
+        run: rm -f *.dump

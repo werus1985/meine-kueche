@@ -324,6 +324,8 @@ Nach dem Push:
 
 ## Sicherheit & Hosting
 
+Schritt-für-Schritt-Anleitung für den Livegang: [`../docs/deployment.md`](../docs/deployment.md).
+
 - **Header/CSP:** `next.config.ts` setzt CSP, HSTS (nur Produktion),
   `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` und
   `Permissions-Policy`; `X-Powered-By` ist abgeschaltet. Die CSP erlaubt

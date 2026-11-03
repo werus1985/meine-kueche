@@ -39,6 +39,7 @@ export async function proxy(request: NextRequest) {
   const isPublic =
     pathname.startsWith("/auth") ||
     pathname.startsWith("/invite") ||
+    pathname === "/api/health" ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/robots.txt";
 
