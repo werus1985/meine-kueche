@@ -69,6 +69,12 @@ Funktionen und die Einladungs-/Registrierungsfunktionen an.
 
 *Authentication → Rate Limits* prüfen (E-Mails pro Stunde).
 
+> **Ohne SMTP (Übergangslösung):** Solange kein eigener Mailversand eingerichtet
+> ist, kommen Bestätigungs- und Reset-Mails nur über den stark limitierten
+> Standard-Versand. Für den Testbetrieb „Confirm email" abschalten
+> (*Authentication → Sign In / Providers → Email*) oder Konten im Dashboard
+> anlegen. Passwort-Reset und E-Mail-Wechsel funktionieren erst mit SMTP.
+
 ## 5. Vercel-Projekt
 
 1. **Add New → Project** → GitHub-Repo importieren.
