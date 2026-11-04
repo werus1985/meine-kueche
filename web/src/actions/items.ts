@@ -1222,3 +1222,73 @@ export async function deleteItemByIdAction(
   revalidatePath("/items");
   return { ok: true };
 }
+
+/** Einkaufs-Eintrag ohne Redirect in den Vorrat übernehmen (optimistisch). */
+export async function moveItemToStockByIdAction(
+  id: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const context = await getActiveHousehold();
+  if (!context) return { ok: false, message: "Kein Haushalt ausgewählt." };
+  if (!context.active.canWrite) {
+    return { ok: false, message: "Du hast in diesem Haushalt nur Leserechte." };
+  }
+
+  const itemId = String(id ?? "").trim();
+  if (!itemId) return { ok: false, message: "Eintrag fehlt." };
+
+  const supabase = await createClient();
+  const { data: item } = await supabase
+    .from("kitchen_items")
+    .select(shopItemForStockSelect)
+    .eq("id", itemId)
+    .eq("household_id", context.active.id)
+    .eq("kind", "shop")
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!item) return { ok: false, message: "Eintrag wurde nicht gefunden." };
+
+  const moved = await moveShopItemToStock(supabase, context.active.id, item);
+  if (!moved) {
+    return { ok: false, message: "Der Eintrag konnte nicht übernommen werden." };
+  }
+
+  revalidatePath("/items");
+  return { ok: true };
+}
+
+/** Batch-Löschen ohne Redirect (optimistische Oberfläche). */
+export async function deleteItemsByIdsAction(
+  ids: string[],
+): Promise<{ ok: boolean; message?: string; count?: number }> {
+  const context = await getActiveHousehold();
+  if (!context) return { ok: false, message: "Kein Haushalt ausgewählt." };
+  if (!context.active.canWrite) {
+    return { ok: false, message: "Du hast in diesem Haushalt nur Leserechte." };
+  }
+
+  const unique = [
+    ...new Set(
+      (Array.isArray(ids) ? ids : []).filter(
+        (id): id is string => typeof id === "string" && id.length > 0,
+      ),
+    ),
+  ].slice(0, BULK_DELETE_LIMIT);
+
+  if (unique.length === 0) return { ok: true, count: 0 };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("kitchen_items")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", unique)
+    .eq("household_id", context.active.id)
+    .eq("kind", "stock")
+    .is("deleted_at", null)
+    .select("id");
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/items");
+  return { ok: true, count: data?.length ?? 0 };
+}

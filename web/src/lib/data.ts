@@ -4,8 +4,8 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getCurrentUser } from "@/lib/auth";
 import { SUPABASE_URL } from "@/lib/env";
+import { getRequestIdentity } from "@/lib/request-identity";
 import { createClient } from "@/lib/supabase/server";
 import {
   permissionsForRole,
@@ -29,8 +29,8 @@ type HouseholdRow = {
 };
 
 export const getHouseholds = cache(async (): Promise<HouseholdSummary[]> => {
-  // Bereits gecachter Nutzer – vermeidet einen zweiten Auth-Roundtrip.
-  const user = await getCurrentUser();
+  // Identität kommt aus dem Proxy (bereits verifiziert) – kein Auth-Roundtrip.
+  const user = await getRequestIdentity();
   if (!user) return [];
 
   const supabase = await createClient();

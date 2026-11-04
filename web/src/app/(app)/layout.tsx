@@ -4,8 +4,10 @@ import { redirect } from "next/navigation";
 import { AiChatOverlayLazy } from "@/components/ai-chat-overlay-lazy";
 import { AiChatProvider } from "@/components/ai-chat-context";
 import { AppShell } from "@/components/app-shell";
-import { requireUser } from "@/lib/auth";
+import { ConfirmProvider } from "@/components/confirm-dialog";
+import { ToastProvider } from "@/components/toast";
 import { getActiveHousehold, getProfile } from "@/lib/data";
+import { getRequestIdentity } from "@/lib/request-identity";
 import { createClient } from "@/lib/supabase/server";
 import { daysUntil } from "@/lib/utils";
 
@@ -20,7 +22,8 @@ export default async function AppLayout({
   children: ReactNode;
   modal: ReactNode;
 }) {
-  const user = await requireUser();
+  const user = await getRequestIdentity();
+  if (!user) redirect("/login");
   const supabase = await createClient();
 
   // Haushalte, Profil und persönlicher KI-Key hängen nicht voneinander ab –
@@ -66,17 +69,21 @@ export default async function AppLayout({
 
   return (
     <AiChatProvider>
-      <AppShell
-        context={context}
-        user={{
-          email: user.email ?? "",
-          displayName: profile?.display_name ?? null,
-        }}
-      >
-        {children}
-        {modal}
-      </AppShell>
-      <AiChatOverlayLazy ai={aiConfig} />
+      <ToastProvider>
+        <ConfirmProvider>
+          <AppShell
+            context={context}
+            user={{
+              email: user.email ?? "",
+              displayName: profile?.display_name ?? null,
+            }}
+          >
+            {children}
+            {modal}
+          </AppShell>
+          <AiChatOverlayLazy ai={aiConfig} />
+        </ConfirmProvider>
+      </ToastProvider>
     </AiChatProvider>
   );
 }

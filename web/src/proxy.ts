@@ -1,15 +1,19 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/env";
 import { authCookieOptions } from "@/lib/supabase/cookie-options";
+
+type PendingCookie = { name: string; value: string; options: CookieOptions };
 
 export async function proxy(request: NextRequest) {
   if (!isSupabaseConfigured) {
     return NextResponse.next({ request });
   }
 
-  let response = NextResponse.next({ request });
+  // Cookies, die Supabase beim Session-Refresh setzt, erst am Ende auf die
+  // tatsächlich zurückgegebene Antwort schreiben.
+  const pendingCookies: PendingCookie[] = [];
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookieOptions: authCookieOptions,
@@ -21,10 +25,7 @@ export async function proxy(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
-        });
+        pendingCookies.push(...cookiesToSet);
       },
     },
   });
@@ -32,6 +33,23 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  function withCookies(response: NextResponse) {
+    for (const { name, value, options } of pendingCookies) {
+      response.cookies.set(name, value, options);
+    }
+    return response;
+  }
+
+  // Verifizierte Identität an die App weiterreichen. Eingehende Header werden
+  // vorher entfernt, damit sie nicht von außen gefälscht werden können.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete("x-mk-user-id");
+  requestHeaders.delete("x-mk-user-email");
+  if (user) {
+    requestHeaders.set("x-mk-user-id", user.id);
+    requestHeaders.set("x-mk-user-email", user.email ?? "");
+  }
 
   const { pathname, search } = request.nextUrl;
   const isAuthPage = pathname === "/login" || pathname === "/register";
@@ -48,17 +66,17 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/login";
     url.search = "";
     url.searchParams.set("next", `${pathname}${search}`);
-    return NextResponse.redirect(url);
+    return withCookies(NextResponse.redirect(url));
   }
 
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";
-    return NextResponse.redirect(url);
+    return withCookies(NextResponse.redirect(url));
   }
 
-  return response;
+  return withCookies(NextResponse.next({ request: { headers: requestHeaders } }));
 }
 
 export const config = {

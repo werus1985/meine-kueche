@@ -26,13 +26,16 @@ import {
   clearShoppingListAction,
   deleteCheckedShoppingAction,
   deleteItemByIdAction,
-  deleteItemsAction,
+  deleteItemsByIdsAction,
   moveCheckedToStockAction,
+  moveItemToStockByIdAction,
 } from "@/actions/items";
 import { ConfirmSubmitButton } from "@/components/confirm-button";
+import { useConfirm } from "@/components/confirm-dialog";
 import { ItemCard, type ItemRow } from "@/components/item-card";
 import { ProductGroupCard } from "@/components/product-group-card";
 import { StockFilterPanel } from "@/components/stock-filter-panel";
+import { useToast } from "@/components/toast";
 import {
   Alert,
   buttonPrimary,
@@ -145,8 +148,9 @@ export function InventoryWorkspace({
 
   // Optimistisches Löschen: Artikel sofort ausblenden, Server gleicht nach.
   const [deletedIds, setDeletedIds] = useState<Set<string>>(() => new Set());
-  const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
   const [, startItemDelete] = useTransition();
+  const confirm = useConfirm();
+  const toast = useToast();
 
   // Batch-Auswahl im Vorrat.
   const [selecting, setSelecting] = useState(false);
@@ -427,20 +431,52 @@ export function InventoryWorkspace({
     setSelected(new Set());
   }
 
-  function deleteSelected() {
+  async function deleteSelected() {
     const ids = [...selected];
     if (ids.length === 0 || deletePending) return;
     const label = ids.length === 1 ? "1 Artikel" : `${ids.length} Artikel`;
-    if (!window.confirm(`${label} wirklich löschen?`)) return;
+    const accepted = await confirm({
+      title: `${label} wirklich löschen?`,
+      description: "Die Artikel werden aus dem Vorrat entfernt.",
+      confirmLabel: "Löschen",
+    });
+    if (!accepted) return;
+
     setSelected(new Set());
+    // Sofort ausblenden, Server im Hintergrund.
+    setDeletedIds((current) => {
+      const next = new Set(current);
+      for (const id of ids) next.add(id);
+      return next;
+    });
+
     startDelete(async () => {
-      await deleteItemsAction(ids);
+      const result = await deleteItemsByIdsAction(ids);
+      if (!result.ok) {
+        setDeletedIds((current) => {
+          const next = new Set(current);
+          for (const id of ids) next.delete(id);
+          return next;
+        });
+        toast(result.message ?? "Löschen fehlgeschlagen.", "error");
+        return;
+      }
+      toast(
+        result.count === 1
+          ? "1 Artikel gelöscht."
+          : `${result.count ?? ids.length} Artikel gelöscht.`,
+      );
+      router.refresh();
     });
   }
 
-  function requestDelete(item: { id: string; name: string }) {
-    if (!window.confirm(`„${item.name}“ wirklich löschen?`)) return;
-    setDeleteNotice(null);
+  async function requestDelete(item: { id: string; name: string }) {
+    const accepted = await confirm({
+      title: `„${item.name}“ wirklich löschen?`,
+      confirmLabel: "Löschen",
+    });
+    if (!accepted) return;
+
     setDeletedIds((current) => new Set(current).add(item.id));
     startItemDelete(async () => {
       const result = await deleteItemByIdAction(item.id);
@@ -450,10 +486,28 @@ export function InventoryWorkspace({
           next.delete(item.id);
           return next;
         });
-        setDeleteNotice(result.message ?? "Löschen fehlgeschlagen.");
+        toast(result.message ?? "Löschen fehlgeschlagen.", "error");
         return;
       }
       // Serverstand im Hintergrund nachziehen (Zähler, Gruppen, Kennzahlen).
+      router.refresh();
+    });
+  }
+
+  function requestMoveToStock(item: { id: string; name: string }) {
+    setDeletedIds((current) => new Set(current).add(item.id));
+    startItemDelete(async () => {
+      const result = await moveItemToStockByIdAction(item.id);
+      if (!result.ok) {
+        setDeletedIds((current) => {
+          const next = new Set(current);
+          next.delete(item.id);
+          return next;
+        });
+        toast(result.message ?? "Übernehmen fehlgeschlagen.", "error");
+        return;
+      }
+      toast(`„${item.name}“ ist jetzt im Vorrat.`);
       router.refresh();
     });
   }
@@ -549,12 +603,6 @@ export function InventoryWorkspace({
       {status ? (
         <div className="mb-3">
           <Alert tone={status.tone}>{status.message}</Alert>
-        </div>
-      ) : null}
-
-      {deleteNotice ? (
-        <div className="mb-3">
-          <Alert tone="error">{deleteNotice}</Alert>
         </div>
       ) : null}
 
@@ -732,6 +780,7 @@ export function InventoryWorkspace({
                     canWrite={canWrite}
                     redirectTo={returnTo}
                     onRequestDelete={requestDelete}
+                    onRequestMoveToStock={requestMoveToStock}
                   />
                 ))}
               </div>
@@ -773,6 +822,7 @@ export function InventoryWorkspace({
                       canWrite={canWrite}
                       redirectTo={returnTo}
                       onRequestDelete={requestDelete}
+                      onRequestMoveToStock={requestMoveToStock}
                     />
                   ))}
                 </div>

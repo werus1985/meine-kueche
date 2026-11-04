@@ -81,6 +81,7 @@ export function ItemCard({
   selected = false,
   onSelectToggle,
   onRequestDelete,
+  onRequestMoveToStock,
 }: {
   item: ItemRow;
   photoUrl?: string | null;
@@ -94,6 +95,8 @@ export function ItemCard({
   onSelectToggle?: (id: string) => void;
   /** Optimistisches Löschen (ohne Formular-Roundtrip). */
   onRequestDelete?: (item: ItemRow) => void;
+  /** Optimistische Übernahme in den Vorrat. */
+  onRequestMoveToStock?: (item: ItemRow) => void;
 }) {
   const category = relationName(item.kitchen_categories);
   const location = relationName(item.kitchen_locations);
@@ -135,17 +138,29 @@ export function ItemCard({
   const actionButtons = canWrite ? (
     <>
       {isShopping ? (
-        <form action={moveToStockAction}>
-          <input type="hidden" name="id" value={item.id} />
+        onRequestMoveToStock ? (
           <button
-            type="submit"
+            type="button"
+            onClick={() => onRequestMoveToStock(item)}
             aria-label="In den Vorrat übernehmen"
             title="In den Vorrat übernehmen"
             className="inline-flex size-9 items-center justify-center rounded-lg text-stone-500 transition hover:bg-[var(--accent-50)] hover:text-[var(--accent-800)]"
           >
             <ArrowDownToLine className="size-4" />
           </button>
-        </form>
+        ) : (
+          <form action={moveToStockAction}>
+            <input type="hidden" name="id" value={item.id} />
+            <button
+              type="submit"
+              aria-label="In den Vorrat übernehmen"
+              title="In den Vorrat übernehmen"
+              className="inline-flex size-9 items-center justify-center rounded-lg text-stone-500 transition hover:bg-[var(--accent-50)] hover:text-[var(--accent-800)]"
+            >
+              <ArrowDownToLine className="size-4" />
+            </button>
+          </form>
+        )
       ) : (
         <form action={addToShoppingListAction}>
           <input type="hidden" name="id" value={item.id} />
