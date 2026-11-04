@@ -27,6 +27,7 @@ export function IconNavLink({
   return (
     <Link
       href={target}
+      prefetch
       aria-label={targetLabel}
       title={targetLabel}
       aria-current={active ? "page" : undefined}

@@ -106,7 +106,9 @@ export default async function EditItemPage({
         units={units.map((unit) => ({ ...unit, step_size: Number(unit.step_size) }))}
         products={products.map((product) => ({
           ...product,
-          photoUrl: product.photo_path ? photoUrls.get(product.photo_path) ?? null : null,
+          photoUrl: product.photo_path
+            ? photoUrls.get(product.photo_path) ?? null
+            : product.photo_url ?? null,
         }))}
         initialPurchasedAt={todayIso()}
         photoUrl={item.photo_path ? photoUrls.get(item.photo_path) : null}

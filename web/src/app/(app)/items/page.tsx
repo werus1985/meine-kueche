@@ -26,7 +26,7 @@ type SearchParams = {
 };
 
 const itemSelect =
-  "id, product_id, name, kind, barcode, qty, expiry, purchased_at, checked, notes, photo_path, category_id, location_id, unit_id, updated_at, kitchen_categories(id, name), kitchen_locations(id, name), kitchen_units(id, name, step_size)";
+  "id, product_id, name, kind, barcode, qty, expiry, purchased_at, checked, notes, photo_path, photo_url, category_id, location_id, unit_id, updated_at, kitchen_categories(id, name), kitchen_locations(id, name), kitchen_units(id, name, step_size)";
 
 export default async function ItemsPage({
   searchParams,
@@ -35,27 +35,29 @@ export default async function ItemsPage({
 }) {
   const params = await searchParams;
   const { active } = await requireHousehold();
-  // Verwaiste Produktgruppen (>180 Tage ohne Artikel) still aufräumen.
-  if (active.canWrite) {
-    await cleanupUnusedProducts(active.id);
-  }
   const supabase = await createClient();
   const kind = params.kind === "shop" ? "shop" : "stock";
 
-  const [categories, locations, units, products, quickFilters, itemsResult] = await Promise.all([
-    getCategories(active.id),
-    getLocations(active.id),
-    getUnits(active.id),
-    getProducts(active.id),
-    getQuickFilters(active.id),
-    supabase
-      .from("kitchen_items")
-      .select(itemSelect)
-      .eq("household_id", active.id)
-      .is("deleted_at", null)
-      .order("name", { ascending: true })
-      .range(0, 999),
-  ]);
+  const [categories, locations, units, products, quickFilters, itemsResult] =
+    await Promise.all([
+      getCategories(active.id),
+      getLocations(active.id),
+      getUnits(active.id),
+      getProducts(active.id),
+      getQuickFilters(active.id),
+      supabase
+        .from("kitchen_items")
+        .select(itemSelect)
+        .eq("household_id", active.id)
+        .is("deleted_at", null)
+        .order("name", { ascending: true })
+        .range(0, 999),
+      // Verwaiste Produktgruppen (>180 Tage ohne Artikel) still aufräumen –
+      // parallel, damit es den Seitenaufbau nicht verlängert.
+      active.canWrite
+        ? cleanupUnusedProducts(active.id)
+        : Promise.resolve(),
+    ]);
 
   const rows = (itemsResult.data ?? []) as unknown as ItemRow[];
   const photoUrls = await getPhotoUrls([
@@ -67,18 +69,24 @@ export default async function ItemsPage({
     .map((item) => ({
       ...item,
       updated_at: item.updated_at,
-      photoUrl: item.photo_path ? photoUrls.get(item.photo_path) ?? null : null,
+      photoUrl: item.photo_path
+        ? photoUrls.get(item.photo_path) ?? null
+        : item.photo_url ?? null,
     }));
   const shopItems = rows
     .filter((item) => item.kind === "shop")
     .map((item) => ({
       ...item,
       updated_at: item.updated_at,
-      photoUrl: item.photo_path ? photoUrls.get(item.photo_path) ?? null : null,
+      photoUrl: item.photo_path
+        ? photoUrls.get(item.photo_path) ?? null
+        : item.photo_url ?? null,
     }));
   const inventoryProducts = products.map((product) => ({
     ...product,
-    photoUrl: product.photo_path ? photoUrls.get(product.photo_path) ?? null : null,
+    photoUrl: product.photo_path
+      ? photoUrls.get(product.photo_path) ?? null
+      : product.photo_url ?? null,
   }));
 
   const barcode = normalizeBarcode(params.barcode);

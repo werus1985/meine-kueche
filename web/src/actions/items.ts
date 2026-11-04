@@ -2,9 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 import { getActiveHousehold } from "@/lib/data";
+import { isAllowedExternalPhotoUrl } from "@/lib/barcode-lookup";
 import { normalizeExpiryInput } from "@/lib/date-input";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/env";
 import {
   importExternalPhoto,
   removePhoto,
@@ -13,6 +17,47 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import type { FormState } from "@/lib/types";
 import { normalizeBarcode, todayIso } from "@/lib/utils";
+
+/**
+ * Lädt ein externes Produktfoto nach der Antwort in den eigenen Storage.
+ * OFF liefert Bilder oft erst nach 10–25 s – der Nutzer wartet nicht darauf.
+ */
+function scheduleExternalPhotoImport(params: {
+  householdId: string;
+  table: "kitchen_items" | "kitchen_products";
+  targetId: string;
+  url: string;
+  accessToken: string | null;
+}) {
+  if (!params.accessToken) return;
+
+  after(async () => {
+    try {
+      const client = createSupabaseClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
+        {
+          global: { headers: { Authorization: `Bearer ${params.accessToken}` } },
+          auth: { persistSession: false, autoRefreshToken: false },
+        },
+      );
+      const imported = await importExternalPhoto(
+        params.householdId,
+        params.targetId,
+        params.url,
+        client,
+      );
+      if (!imported) return;
+      await client
+        .from(params.table)
+        .update({ photo_path: imported, photo_url: null })
+        .eq("id", params.targetId)
+        .eq("household_id", params.householdId);
+    } catch {
+      // Best effort – das externe Bild bleibt als Fallback gespeichert.
+    }
+  });
+}
 
 function optionalText(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
@@ -151,7 +196,7 @@ export async function saveItemAction(
   const existingResult = id
     ? await supabase
         .from("kitchen_items")
-        .select("id, household_id, product_id, version, photo_path, barcode, name, category_id, unit_id, notes")
+        .select("id, household_id, product_id, version, photo_path, photo_url, barcode, name, category_id, unit_id, notes")
         .eq("id", id)
         .eq("household_id", context.active.id)
         .is("deleted_at", null)
@@ -184,13 +229,14 @@ export async function saveItemAction(
     unit_id: string | null;
     last_location_id: string | null;
     photo_path: string | null;
+    photo_url: string | null;
     seasonal: boolean;
   } | null = null;
 
   if (productId) {
     const { data, error } = await supabase
       .from("kitchen_products")
-      .select("id, household_id, barcode, name, category_id, unit_id, last_location_id, photo_path, seasonal")
+      .select("id, household_id, barcode, name, category_id, unit_id, last_location_id, photo_path, photo_url, seasonal")
       .eq("id", productId)
       .eq("household_id", context.active.id)
       .maybeSingle();
@@ -220,7 +266,7 @@ export async function saveItemAction(
     }
     const { data: found, error: productError } = await supabase
       .from("kitchen_products")
-      .select("id, household_id, barcode, name, category_id, unit_id, last_location_id, photo_path, seasonal")
+      .select("id, household_id, barcode, name, category_id, unit_id, last_location_id, photo_path, photo_url, seasonal")
       .eq("id", productId)
       .eq("household_id", context.active.id)
       .single();
@@ -342,49 +388,61 @@ export async function saveItemAction(
     if (product.photo_path && product.photo_path !== productPhotoPath) {
       await removePhoto(product.photo_path);
     }
+    if (uploadedProductPhoto || removeExistingPhoto) {
+      await supabase
+        .from("kitchen_products")
+        .update({ photo_url: null })
+        .eq("id", product.id)
+        .eq("household_id", context.active.id);
+    }
     revalidatePath("/", "layout");
     redirect(withStatusFlag(redirectTo, "updated"));
   }
 
   if (!id) {
     const ownPhoto = photo instanceof File && photo.size > 0;
-    const externalPhotoUrl = String(formData.get("externalPhotoUrl") ?? "").trim();
+    const externalPhotoUrlRaw = String(
+      formData.get("externalPhotoUrl") ?? "",
+    ).trim();
+    const externalPhotoUrl = isAllowedExternalPhotoUrl(externalPhotoUrlRaw)
+      ? externalPhotoUrlRaw
+      : null;
     let productPhotoPath = product?.photo_path ?? null;
+    let productPhotoUrl = product?.photo_url ?? null;
 
-    if (productId && productCreated && ownPhoto) {
-      const upload = await uploadPhoto(context.active.id, productId, photo);
-      if (upload.error) return { ok: false, message: upload.error };
-      productPhotoPath = upload.path ?? null;
-      if (productPhotoPath) {
-        const { error: photoError } = await supabase
-          .from("kitchen_products")
-          .update({ photo_path: productPhotoPath })
-          .eq("id", productId)
-          .eq("household_id", context.active.id);
-        if (photoError) {
-          await removePhoto(productPhotoPath);
-          return { ok: false, message: photoError.message };
+    if (productId && ownPhoto) {
+      // Eigenes Foto ersetzt einen eventuellen externen Fallback.
+      if (productCreated) {
+        const upload = await uploadPhoto(context.active.id, productId, photo);
+        if (upload.error) return { ok: false, message: upload.error };
+        productPhotoPath = upload.path ?? null;
+        if (productPhotoPath) {
+          const { error: photoError } = await supabase
+            .from("kitchen_products")
+            .update({ photo_path: productPhotoPath, photo_url: null })
+            .eq("id", productId)
+            .eq("household_id", context.active.id);
+          if (photoError) {
+            await removePhoto(productPhotoPath);
+            return { ok: false, message: photoError.message };
+          }
         }
       }
-    } else if (productId && productCreated && !ownPhoto && externalPhotoUrl) {
-      // Foto aus der Produktdatenbank als Startpunkt (best effort).
-      const imported = await importExternalPhoto(
-        context.active.id,
-        productId,
-        externalPhotoUrl,
-      );
-      if (imported) {
-        const { error: photoError } = await supabase
-          .from("kitchen_products")
-          .update({ photo_path: imported })
-          .eq("id", productId)
-          .eq("household_id", context.active.id);
-        if (photoError) {
-          await removePhoto(imported);
-        } else {
-          productPhotoPath = imported;
-        }
-      }
+      productPhotoUrl = null;
+    } else if (
+      productId &&
+      !ownPhoto &&
+      externalPhotoUrl &&
+      !productPhotoPath &&
+      !productPhotoUrl
+    ) {
+      // Externes Bild sofort verfügbar machen; Download läuft im Hintergrund.
+      const { error: photoError } = await supabase
+        .from("kitchen_products")
+        .update({ photo_url: externalPhotoUrl })
+        .eq("id", productId)
+        .eq("household_id", context.active.id);
+      if (!photoError) productPhotoUrl = externalPhotoUrl;
     }
 
     const { data: inserted, error } = await supabase
@@ -394,6 +452,11 @@ export async function saveItemAction(
         household_id: context.active.id,
         product_id: productId,
         photo_path: productId ? productPhotoPath : null,
+        photo_url: productId
+          ? productPhotoUrl
+          : ownPhoto
+            ? null
+            : externalPhotoUrl,
       })
       .select("id")
       .single();
@@ -410,25 +473,24 @@ export async function saveItemAction(
       if (upload.path) {
         const { error: photoError } = await supabase
           .from("kitchen_items")
-          .update({ photo_path: upload.path })
+          .update({ photo_path: upload.path, photo_url: null })
           .eq("id", inserted.id);
         if (photoError) return { ok: false, message: photoError.message };
       }
-    } else if (!productId && !ownPhoto && externalPhotoUrl) {
-      const imported = await importExternalPhoto(
-        context.active.id,
-        inserted.id,
-        externalPhotoUrl,
-      );
-      if (imported) {
-        const { error: photoError } = await supabase
-          .from("kitchen_items")
-          .update({ photo_path: imported })
-          .eq("id", inserted.id);
-        if (photoError) {
-          await removePhoto(imported);
-        }
-      }
+    }
+
+    // Lokale Kopie im Hintergrund ziehen (OFF ist oft 10–25 s langsam).
+    if (!ownPhoto && externalPhotoUrl) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      scheduleExternalPhotoImport({
+        householdId: context.active.id,
+        table: productId ? "kitchen_products" : "kitchen_items",
+        targetId: productId ?? inserted.id,
+        url: externalPhotoUrl,
+        accessToken: session?.access_token ?? null,
+      });
     }
 
     await rememberExternalMapping(
@@ -452,6 +514,11 @@ export async function saveItemAction(
       ...values,
       product_id: productId,
       photo_path: productId ? product?.photo_path ?? null : existing?.photo_path,
+      photo_url: productId
+        ? product?.photo_url ?? null
+        : removeExistingPhoto
+          ? null
+          : existing?.photo_url ?? null,
     })
     .eq("id", id)
     .eq("household_id", context.active.id)
@@ -704,7 +771,7 @@ export async function uploadItemPhotoAction(
 
   const { error: updateError } = await supabase
     .from("kitchen_items")
-    .update({ photo_path: upload.path })
+    .update({ photo_path: upload.path, photo_url: null })
     .eq("id", item.id)
     .eq("household_id", context.active.id);
   if (updateError) {
@@ -1123,4 +1190,35 @@ export async function addToShoppingListAction(formData: FormData): Promise<void>
   }
 
   revalidatePath("/items");
+}
+
+/**
+ * Löschen ohne Redirect: Die Oberfläche blendet den Artikel sofort aus und
+ * gleicht danach im Hintergrund ab. Der Formular-Weg (deleteItemAction)
+ * bleibt für den Betrieb ohne JavaScript erhalten.
+ */
+export async function deleteItemByIdAction(
+  id: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const context = await getActiveHousehold();
+  if (!context) return { ok: false, message: "Kein Haushalt ausgewählt." };
+  if (!context.active.canWrite) {
+    return { ok: false, message: "Du hast in diesem Haushalt nur Leserechte." };
+  }
+
+  const itemId = String(id ?? "").trim();
+  if (!itemId) return { ok: false, message: "Artikel fehlt." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("kitchen_items")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", itemId)
+    .eq("household_id", context.active.id)
+    .is("deleted_at", null);
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/items");
+  return { ok: true };
 }

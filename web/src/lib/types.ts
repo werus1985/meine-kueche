@@ -54,6 +54,7 @@ export type KitchenProduct = {
   unit_id: string | null;
   last_location_id: string | null;
   photo_path: string | null;
+  photo_url: string | null;
   seasonal: boolean;
   created_at: string;
   updated_at: string;

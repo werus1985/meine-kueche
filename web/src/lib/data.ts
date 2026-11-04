@@ -4,6 +4,8 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getCurrentUser } from "@/lib/auth";
+import { SUPABASE_URL } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import {
   permissionsForRole,
@@ -27,12 +29,11 @@ type HouseholdRow = {
 };
 
 export const getHouseholds = cache(async (): Promise<HouseholdSummary[]> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Bereits gecachter Nutzer – vermeidet einen zweiten Auth-Roundtrip.
+  const user = await getCurrentUser();
   if (!user) return [];
 
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("household_members")
     .select("household_id, role, households!inner(id, name)")
@@ -211,7 +212,7 @@ export async function getProducts(householdId: string): Promise<KitchenProduct[]
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("kitchen_products")
-    .select("id, household_id, barcode, name, category_id, unit_id, last_location_id, photo_path, seasonal, created_at, updated_at")
+    .select("id, household_id, barcode, name, category_id, unit_id, last_location_id, photo_path, photo_url, seasonal, created_at, updated_at")
     .eq("household_id", householdId)
     .order("name", { ascending: true })
     .range(0, 999);
@@ -309,12 +310,18 @@ export async function getRecipes(
     stepsByRecipe.set(row.recipe_id, list);
   }
 
+  const photoUrls = await getPhotoUrls(
+    (recipesResult.data ?? []).map((recipe) => recipe.photo_path),
+  );
+
   return (recipesResult.data ?? []).map((recipe) => ({
     ...recipe,
     source: recipe.source as RecipeWithDetails["source"],
     ingredients: ingredientsByRecipe.get(recipe.id) ?? [],
     steps: stepsByRecipe.get(recipe.id) ?? [],
-    photoUrl: getPhotoUrl(recipe.photo_path),
+    photoUrl: recipe.photo_path
+      ? photoUrls.get(recipe.photo_path) ?? null
+      : null,
   }));
 }
 
@@ -331,12 +338,41 @@ export function getPhotoUrl(path: string | null | undefined) {
   const encoded = path.split("/").map(encodeURIComponent).join("/");
   return `/api/photos/${encoded}`;}
 
+/**
+ * Bildet Storage-Pfade auf URLs ab.
+ *
+ * In Produktion werden signierte Supabase-URLs erzeugt (ein Aufruf für alle
+ * Bilder): Der Browser lädt direkt vom Storage-CDN, statt jedes Bild durch
+ * eine eigene Vercel-Funktion zu schicken. Lokal/HTTP bleibt der Proxy.
+ */
 export async function getPhotoUrls(paths: (string | null)[]) {
   const result = new Map<string, string>();
-  for (const path of paths) {
-    if (!path) continue;
-    result.set(path, getPhotoUrl(path) as string);
+  const unique = [
+    ...new Set(paths.filter((path): path is string => Boolean(path))),
+  ];
+  if (unique.length === 0) return result;
+
+  const directStorage =
+    process.env.NODE_ENV === "production" &&
+    SUPABASE_URL.startsWith("https://");
+
+  if (directStorage) {
+    const supabase = await createClient();
+    const { data } = await supabase.storage
+      .from("product-photos")
+      .createSignedUrls(unique, 60 * 60);
+    for (const entry of data ?? []) {
+      if (entry.path && entry.signedUrl) {
+        result.set(entry.path, entry.signedUrl);
+      }
+    }
   }
+
+  // Fallback (Dev oder fehlende Signed URL): same-origin Proxy.
+  for (const path of unique) {
+    if (!result.has(path)) result.set(path, getPhotoUrl(path) as string);
+  }
+
   return result;
 }
 

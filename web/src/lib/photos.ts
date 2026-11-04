@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { isAllowedExternalPhotoUrl } from "@/lib/barcode-lookup";
 import { createClient } from "@/lib/supabase/server";
 
@@ -55,12 +57,14 @@ export async function importExternalPhoto(
   householdId: string,
   ownerId: string,
   url: string,
+  client?: SupabaseClient,
 ): Promise<string | null> {
   if (!isAllowedExternalPhotoUrl(url)) return null;
   try {
     const response = await fetch(url, {
       headers: { "User-Agent": "MeineKueche/0.1 (private Haushalts-App)" },
-      signal: AbortSignal.timeout(6000),
+      // OFF liefert Bilder teils erst nach 10–25 s; läuft im Hintergrund.
+      signal: AbortSignal.timeout(30_000),
       cache: "no-store",
     });
     if (!response.ok) return null;
@@ -74,7 +78,7 @@ export async function importExternalPhoto(
     const bytes = Buffer.from(await response.arrayBuffer());
     if (bytes.byteLength === 0 || bytes.byteLength > MAX_PHOTO_BYTES) return null;
 
-    const supabase = await createClient();
+    const supabase = client ?? (await createClient());
     const path = `${householdId}/${ownerId}/${crypto.randomUUID()}.${extensionFor(type)}`;
     const { error } = await supabase.storage
       .from("product-photos")

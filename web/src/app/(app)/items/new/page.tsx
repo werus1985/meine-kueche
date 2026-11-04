@@ -71,7 +71,9 @@ export default async function NewItemPage({
         units={units.map((unit) => ({ ...unit, step_size: Number(unit.step_size) }))}
         products={products.map((product) => ({
           ...product,
-          photoUrl: product.photo_path ? productPhotoUrls.get(product.photo_path) ?? null : null,
+          photoUrl: product.photo_path
+            ? productPhotoUrls.get(product.photo_path) ?? null
+            : product.photo_url ?? null,
         }))}
         initialPurchasedAt={todayIso()}
         initialKind={kind}

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 
-import { AiChatOverlay } from "@/components/ai-chat-overlay";
+import { AiChatOverlayLazy } from "@/components/ai-chat-overlay-lazy";
 import { AiChatProvider } from "@/components/ai-chat-context";
 import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/lib/auth";
@@ -21,19 +21,24 @@ export default async function AppLayout({
   modal: ReactNode;
 }) {
   const user = await requireUser();
-  const context = await getActiveHousehold();
-
-  if (!context) redirect("/onboarding");
-
-  const profile = await getProfile(user.id);
-
   const supabase = await createClient();
-  const [personalKey, householdKey, stockResult] = await Promise.all([
+
+  // Haushalte, Profil und persönlicher KI-Key hängen nicht voneinander ab –
+  // gemeinsam in einer Welle abfragen.
+  const [context, profile, personalKey] = await Promise.all([
+    getActiveHousehold(),
+    getProfile(user.id),
     supabase
       .from("user_ai_settings")
       .select("user_id")
       .eq("user_id", user.id)
       .maybeSingle(),
+  ]);
+
+  if (!context) redirect("/onboarding");
+
+  // Diese beiden brauchen die aktive Haushalts-ID.
+  const [householdKey, stockResult] = await Promise.all([
     supabase
       .from("households")
       .select("gemini_api_key")
@@ -71,7 +76,7 @@ export default async function AppLayout({
         {children}
         {modal}
       </AppShell>
-      <AiChatOverlay ai={aiConfig} />
+      <AiChatOverlayLazy ai={aiConfig} />
     </AiChatProvider>
   );
 }

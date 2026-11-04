@@ -318,9 +318,14 @@ Nach dem Push:
   `expiry-date-field.tsx` setzt die Punkte automatisch und normalisiert beim
   Verlassen. Die Server Action nutzt denselben Parser.
 - Fotos im privaten Bucket `product-photos`, Pfad
-  `{household_id}/{item_id_oder_product_id}/{datei}.jpg`. Auslieferung über
-  die same-origin Route `/api/photos/...` (kein Mixed Content, wenn die App
-  über HTTPS läuft); Altpfade `{user_id}/…` bleiben für den Eigentümer lesbar.
+  `{household_id}/{item_id_oder_product_id}/{datei}.jpg`. In Produktion
+  liefert die App **signierte Storage-URLs** (ein Aufruf für alle Bilder, der
+  Browser lädt direkt vom CDN); lokal/HTTP läuft die Auslieferung über die
+  same-origin Route `/api/photos/...`. Altpfade `{user_id}/…` bleiben für den
+  Eigentümer lesbar.
+- Externe Produktfotos (Open Food Facts) werden sofort als `photo_url`
+  gespeichert und im Hintergrund (30 s Timeout) in den eigenen Storage
+  kopiert; danach gilt `photo_path` und `photo_url` wird geleert.
 
 ## Sicherheit & Hosting
 

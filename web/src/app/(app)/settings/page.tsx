@@ -57,7 +57,7 @@ export default async function SettingsPage({
         .is("deleted_at", null),
       supabase
         .from("kitchen_products")
-        .select("id, name, barcode, category_id, unit_id, photo_path, seasonal")
+        .select("id, name, barcode, category_id, unit_id, photo_path, photo_url, seasonal")
         .eq("household_id", active.id)
         .order("name", { ascending: true }),
     ]);
@@ -103,7 +103,7 @@ export default async function SettingsPage({
     unitName: product.unit_id ? unitNames.get(product.unit_id) ?? null : null,
     photoUrl: product.photo_path
       ? productPhotoUrls.get(product.photo_path) ?? null
-      : null,
+      : product.photo_url ?? null,
     seasonal: product.seasonal,
   }));
 

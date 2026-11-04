@@ -177,14 +177,14 @@ isOneToOne: true
                   ]
                 },"kitchen_items": {
                   Row: {
-                    "barcode": string | null,"category_id": string | null,"checked": boolean,"created_at": string,"created_by": string | null,"deleted_at": string | null,"expiry": string | null,"household_id": string,"id": string,"kind": string,"location_id": string | null,"name": string,"notes": string,"photo_path": string | null,"product_id": string | null,"purchased_at": string | null,"qty": number | null,"unit_id": string | null,"updated_at": string,"updated_by": string | null,"version": number
+                    "barcode": string | null,"category_id": string | null,"checked": boolean,"created_at": string,"created_by": string | null,"deleted_at": string | null,"expiry": string | null,"household_id": string,"id": string,"kind": string,"location_id": string | null,"name": string,"notes": string,"photo_path": string | null,"photo_url": string | null,"product_id": string | null,"purchased_at": string | null,"qty": number | null,"unit_id": string | null,"updated_at": string,"updated_by": string | null,"version": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "barcode"?: string | null,"category_id"?: string | null,"checked"?: boolean,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"expiry"?: string | null,"household_id": string,"id"?: string,"kind": string,"location_id"?: string | null,"name": string,"notes"?: string,"photo_path"?: string | null,"product_id"?: string | null,"purchased_at"?: string | null,"qty"?: number | null,"unit_id"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"version"?: number
+                    "barcode"?: string | null,"category_id"?: string | null,"checked"?: boolean,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"expiry"?: string | null,"household_id": string,"id"?: string,"kind": string,"location_id"?: string | null,"name": string,"notes"?: string,"photo_path"?: string | null,"photo_url"?: string | null,"product_id"?: string | null,"purchased_at"?: string | null,"qty"?: number | null,"unit_id"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"version"?: number
                   }
                   Update: {
-                    "barcode"?: string | null,"category_id"?: string | null,"checked"?: boolean,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"expiry"?: string | null,"household_id"?: string,"id"?: string,"kind"?: string,"location_id"?: string | null,"name"?: string,"notes"?: string,"photo_path"?: string | null,"product_id"?: string | null,"purchased_at"?: string | null,"qty"?: number | null,"unit_id"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"version"?: number
+                    "barcode"?: string | null,"category_id"?: string | null,"checked"?: boolean,"created_at"?: string,"created_by"?: string | null,"deleted_at"?: string | null,"expiry"?: string | null,"household_id"?: string,"id"?: string,"kind"?: string,"location_id"?: string | null,"name"?: string,"notes"?: string,"photo_path"?: string | null,"photo_url"?: string | null,"product_id"?: string | null,"purchased_at"?: string | null,"qty"?: number | null,"unit_id"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"version"?: number
                   }
                   Relationships: [
                     {
@@ -241,14 +241,14 @@ isOneToOne: false
                   ]
                 },"kitchen_products": {
                   Row: {
-                    "barcode": string | null,"category_id": string | null,"created_at": string,"created_by": string | null,"household_id": string,"id": string,"last_location_id": string | null,"name": string,"photo_path": string | null,"seasonal": boolean,"unit_id": string | null,"updated_at": string
+                    "barcode": string | null,"category_id": string | null,"created_at": string,"created_by": string | null,"household_id": string,"id": string,"last_location_id": string | null,"name": string,"photo_path": string | null,"photo_url": string | null,"seasonal": boolean,"unit_id": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "barcode"?: string | null,"category_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"household_id": string,"id"?: string,"last_location_id"?: string | null,"name": string,"photo_path"?: string | null,"seasonal"?: boolean,"unit_id"?: string | null,"updated_at"?: string
+                    "barcode"?: string | null,"category_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"household_id": string,"id"?: string,"last_location_id"?: string | null,"name": string,"photo_path"?: string | null,"photo_url"?: string | null,"seasonal"?: boolean,"unit_id"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "barcode"?: string | null,"category_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"household_id"?: string,"id"?: string,"last_location_id"?: string | null,"name"?: string,"photo_path"?: string | null,"seasonal"?: boolean,"unit_id"?: string | null,"updated_at"?: string
+                    "barcode"?: string | null,"category_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"household_id"?: string,"id"?: string,"last_location_id"?: string | null,"name"?: string,"photo_path"?: string | null,"photo_url"?: string | null,"seasonal"?: boolean,"unit_id"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {

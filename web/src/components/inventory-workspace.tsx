@@ -11,7 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useEffect,
   useLayoutEffect,
@@ -25,6 +25,7 @@ import {
 import {
   clearShoppingListAction,
   deleteCheckedShoppingAction,
+  deleteItemByIdAction,
   deleteItemsAction,
   moveCheckedToStockAction,
 } from "@/actions/items";
@@ -140,6 +141,13 @@ export function InventoryWorkspace({
   // Liste tatsächlich gerendert ist (siehe Effekt unten).
   const pendingScroll = useRef<number | null>(null);
 
+  const router = useRouter();
+
+  // Optimistisches Löschen: Artikel sofort ausblenden, Server gleicht nach.
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(() => new Set());
+  const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
+  const [, startItemDelete] = useTransition();
+
   // Batch-Auswahl im Vorrat.
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -206,6 +214,7 @@ export function InventoryWorkspace({
   const expiringOnly = searchParams.get("expiring") === "1";
   const filteredStock = useMemo(() => {
     const matches = stockItems.filter((item) => {
+      if (deletedIds.has(item.id)) return false;
       if (query) {
         const haystack = [item.name, item.notes, item.barcode]
           .filter(Boolean)
@@ -242,6 +251,7 @@ export function InventoryWorkspace({
     });
   }, [
     stockItems,
+    deletedIds,
     query,
     effectiveCategoryIds,
     locationIds,
@@ -252,6 +262,7 @@ export function InventoryWorkspace({
 
   const filteredShopping = useMemo(() => {
     const matching = shopItems.filter((item) => {
+      if (deletedIds.has(item.id)) return false;
       if (query) {
         const haystack = [item.name, item.notes, item.barcode]
           .filter(Boolean)
@@ -276,7 +287,7 @@ export function InventoryWorkspace({
     return matching.sort(
       (a, b) => Number(a.checked) - Number(b.checked) || a.name.localeCompare(b.name, "de"),
     );
-  }, [shopItems, query, effectiveCategoryIds, locationIds]);
+  }, [shopItems, deletedIds, query, effectiveCategoryIds, locationIds]);
 
   const stockEntries = useMemo(() => {
     const productById = new Map(products.map((product) => [product.id, product]));
@@ -345,6 +356,13 @@ export function InventoryWorkspace({
       ),
     [stockItems, shoppingProductIds, shoppingNames],
   );
+
+  const visibleStockCount = stockItems.filter(
+    (item) => !deletedIds.has(item.id),
+  ).length;
+  const visibleOpenShoppingCount = shopItems.filter(
+    (item) => !item.checked && !deletedIds.has(item.id),
+  ).length;
 
   const openShopping = filteredShopping.filter((item) => !item.checked);
   const doneShopping = filteredShopping.filter((item) => item.checked);
@@ -420,6 +438,26 @@ export function InventoryWorkspace({
     });
   }
 
+  function requestDelete(item: { id: string; name: string }) {
+    if (!window.confirm(`„${item.name}“ wirklich löschen?`)) return;
+    setDeleteNotice(null);
+    setDeletedIds((current) => new Set(current).add(item.id));
+    startItemDelete(async () => {
+      const result = await deleteItemByIdAction(item.id);
+      if (!result.ok) {
+        setDeletedIds((current) => {
+          const next = new Set(current);
+          next.delete(item.id);
+          return next;
+        });
+        setDeleteNotice(result.message ?? "Löschen fehlgeschlagen.");
+        return;
+      }
+      // Serverstand im Hintergrund nachziehen (Zähler, Gruppen, Kennzahlen).
+      router.refresh();
+    });
+  }
+
   function switchTo(next: Kind) {
     if (next === kind) return;
     setSelecting(false);
@@ -483,7 +521,7 @@ export function InventoryWorkspace({
             <span className="truncate">Vorräte</span>
           </span>
           <span className={cn("rounded-full px-2 py-0.5 text-xs", kind === "stock" ? "bg-[var(--accent-800)] text-white" : "bg-stone-100 text-stone-600")}>
-            {stockItems.length}
+            {visibleStockCount}
           </span>
         </button>
         <button
@@ -503,7 +541,7 @@ export function InventoryWorkspace({
             <span className="truncate">Einkauf</span>
           </span>
           <span className={cn("rounded-full px-2 py-0.5 text-xs", kind === "shop" ? "bg-[var(--accent-800)] text-white" : "bg-stone-100 text-stone-600")}>
-            {shopItems.filter((item) => !item.checked).length}
+            {visibleOpenShoppingCount}
           </span>
         </button>
       </div>
@@ -511,6 +549,12 @@ export function InventoryWorkspace({
       {status ? (
         <div className="mb-3">
           <Alert tone={status.tone}>{status.message}</Alert>
+        </div>
+      ) : null}
+
+      {deleteNotice ? (
+        <div className="mb-3">
+          <Alert tone="error">{deleteNotice}</Alert>
         </div>
       ) : null}
 
@@ -556,7 +600,7 @@ export function InventoryWorkspace({
             </StatusChip>
           </div>
           <span className="whitespace-nowrap text-xs text-stone-500">
-            {filteredStock.length} von {stockItems.length} Vorräten
+            {filteredStock.length} von {visibleStockCount} Vorräten
           </span>
         </div>
       ) : null}
@@ -598,12 +642,12 @@ export function InventoryWorkspace({
                     ? "Nichts abgelaufen"
                     : expiringOnly
                       ? "Nichts läuft bald ab"
-                      : stockItems.length === 0
+                      : visibleStockCount === 0
                         ? "Noch keine Vorräte"
                         : "Keine Treffer"
                 }
                 description={
-                  stockItems.length === 0
+                  visibleStockCount === 0
                     ? "Lege den ersten Artikel mit dem + an."
                     : "Passe Suche oder Filter an."
                 }
@@ -620,6 +664,7 @@ export function InventoryWorkspace({
                     canWrite={canWrite}
                     redirectTo={returnTo}
                     onShoppingList={stockOnShoppingList.has(entry.item.id)}
+                    onRequestDelete={requestDelete}
                     selectable={selecting}
                     selected={selected.has(entry.item.id)}
                     onSelectToggle={toggleSelected}
@@ -635,6 +680,7 @@ export function InventoryWorkspace({
                     canWrite={canWrite}
                     redirectTo={returnTo}
                     shoppingItemIds={stockOnShoppingList}
+                    onRequestDelete={requestDelete}
                     selectable={selecting}
                     selectedIds={selected}
                     onToggleItem={toggleSelected}
@@ -685,6 +731,7 @@ export function InventoryWorkspace({
                     photoUrl={item.photoUrl}
                     canWrite={canWrite}
                     redirectTo={returnTo}
+                    onRequestDelete={requestDelete}
                   />
                 ))}
               </div>
@@ -725,6 +772,7 @@ export function InventoryWorkspace({
                       photoUrl={item.photoUrl}
                       canWrite={canWrite}
                       redirectTo={returnTo}
+                      onRequestDelete={requestDelete}
                     />
                   ))}
                 </div>
@@ -738,7 +786,7 @@ export function InventoryWorkspace({
         </div>
       </section>
 
-      {kind === "stock" && canWrite && stockItems.length > 0 ? (
+      {kind === "stock" && canWrite && visibleStockCount > 0 ? (
         <div className="fixed bottom-[calc(1.25rem_+_env(safe-area-inset-bottom))] left-[calc(1rem_+_env(safe-area-inset-left))] z-40 flex items-center gap-2 sm:bottom-6 sm:left-6">
           <button
             type="button"

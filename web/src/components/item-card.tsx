@@ -32,6 +32,7 @@ export type ItemRow = {
   checked: boolean;
   notes: string;
   photo_path: string | null;
+  photo_url: string | null;
   category_id: string | null;
   location_id: string | null;
   unit_id: string | null;
@@ -79,6 +80,7 @@ export function ItemCard({
   selectable = false,
   selected = false,
   onSelectToggle,
+  onRequestDelete,
 }: {
   item: ItemRow;
   photoUrl?: string | null;
@@ -90,6 +92,8 @@ export function ItemCard({
   selectable?: boolean;
   selected?: boolean;
   onSelectToggle?: (id: string) => void;
+  /** Optimistisches Löschen (ohne Formular-Roundtrip). */
+  onRequestDelete?: (item: ItemRow) => void;
 }) {
   const category = relationName(item.kitchen_categories);
   const location = relationName(item.kitchen_locations);
@@ -166,18 +170,30 @@ export function ItemCard({
       >
         <Pencil className="size-4" />
       </Link>
-      <form action={deleteItemAction}>
-        <input type="hidden" name="id" value={item.id} />
-        <input type="hidden" name="redirectTo" value={redirectTo} />
-        <ConfirmSubmitButton
-          message={`„${item.name}“ wirklich löschen?`}
-          ariaLabel="Löschen"
+      {onRequestDelete ? (
+        <button
+          type="button"
+          onClick={() => onRequestDelete(item)}
+          aria-label="Löschen"
           title="Löschen"
           className="inline-flex size-9 items-center justify-center rounded-lg text-stone-400 transition hover:bg-red-50 hover:text-red-700"
         >
           <Trash2 className="size-4" />
-        </ConfirmSubmitButton>
-      </form>
+        </button>
+      ) : (
+        <form action={deleteItemAction}>
+          <input type="hidden" name="id" value={item.id} />
+          <input type="hidden" name="redirectTo" value={redirectTo} />
+          <ConfirmSubmitButton
+            message={`„${item.name}“ wirklich löschen?`}
+            ariaLabel="Löschen"
+            title="Löschen"
+            className="inline-flex size-9 items-center justify-center rounded-lg text-stone-400 transition hover:bg-red-50 hover:text-red-700"
+          >
+            <Trash2 className="size-4" />
+          </ConfirmSubmitButton>
+        </form>
+      )}
     </>
   ) : (
     <Link

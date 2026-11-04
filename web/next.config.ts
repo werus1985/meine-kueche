@@ -14,8 +14,8 @@ const contentSecurityPolicy = [
   // Turbopack mit eval dazu.
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  // Produktfoto-Vorschau aus Open Food Facts (vor dem Import).
-  "img-src 'self' data: blob: https://*.openfoodfacts.org https://*.openfoodfacts.net",
+  // Produktfotos: signierte Storage-URLs (Produktion) und Open-Food-Facts-Vorschau.
+  `img-src 'self' data: blob: ${supabaseUrl} https://*.openfoodfacts.org https://*.openfoodfacts.net`,
   "font-src 'self'",
   `connect-src 'self' ${supabaseUrl} ${supabaseWs}${isDev ? " ws: http: https:" : ""}`,
   "form-action 'self'",
@@ -57,6 +57,12 @@ const nextConfig: NextConfig = {
     serverActions: {
       // Fotos werden auf 4 MB begrenzt (Vercel-Limit für Request-Bodies: 4,5 MB).
       bodySizeLimit: "5mb",
+    },
+    // Client-Cache: kürzlich besuchte Seiten werden kurz wiederverwendet,
+    // damit Zurück/Vorwärts und erneutes Öffnen nicht neu rendern müssen.
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
     },
   },
   async headers() {

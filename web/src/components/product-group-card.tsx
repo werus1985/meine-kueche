@@ -62,6 +62,7 @@ export function ProductGroupCard({
   selectedIds,
   onToggleItem,
   onToggleMany,
+  onRequestDelete,
 }: {
   product: KitchenProduct;
   items: ItemRow[];
@@ -76,6 +77,7 @@ export function ProductGroupCard({
   selectedIds?: ReadonlySet<string>;
   onToggleItem?: (id: string) => void;
   onToggleMany?: (ids: string[], selected: boolean) => void;
+  onRequestDelete?: (item: ItemRow) => void;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
@@ -224,6 +226,7 @@ export function ProductGroupCard({
               selectable={selectable}
               selected={selectedIds?.has(item.id) ?? false}
               onSelectToggle={onToggleItem}
+              onRequestDelete={onRequestDelete}
             />
           ))}
         </div>
